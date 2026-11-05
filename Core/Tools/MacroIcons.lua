@@ -7,7 +7,7 @@ local Macros, IconFilter = ns.Macros, ns.IconFilter
 -- The search looks at the names of the spells and items that use an icon --
 -- straight from the client, so it works in every language; the name index is
 -- built in the background the first time you type. With the icon data
--- (EverFrame_IconData, loaded when the picker opens) it also matches icon names
+-- (BeautifulRogue_IconData, loaded when the picker opens) it also matches icon names
 -- and file IDs and can be narrowed down by category (IconFilter*.lua).
 local App = ns.App
 local mm, Status = Macros.page, Macros.Status
@@ -18,7 +18,7 @@ local ICON, IGAP = 30, 4
 local COLS = math.floor((PAGE_W - 12 + IGAP) / (ICON + IGAP))
 local GRID_TOP = -64
 local IROWS = math.floor((PAGE_H + GRID_TOP - 24 + IGAP) / (ICON + IGAP))
-local picker = CreateFrame("Frame", "EverFrameMacroIconPicker", mm)
+local picker = CreateFrame("Frame", "BeautifulRogueMacroIconPicker", mm)
 picker:SetAllPoints(mm)
 picker:SetFrameLevel(mm:GetFrameLevel() + 20)
 picker:EnableMouse(true)

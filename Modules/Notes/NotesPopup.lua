@@ -16,7 +16,7 @@ local COMPACT_H = 30
 local POPUP_DEF = { point = "CENTER", x = 260, y = 120, w = 280, h = 170 }
 local POPUP_MIN_W, POPUP_MIN_H = 220, 120
 
-local pop = UI.Window("EverFrameTargetNote", POPUP_DEF.w, POPUP_DEF.h, "", { noEscape = true, fixed = true })
+local pop = UI.Window("BeautifulRogueTargetNote", POPUP_DEF.w, POPUP_DEF.h, "", { noEscape = true, fixed = true })
 local popLayer = Notes.Layer("popup")
 pop:SetParent(popLayer)
 pop:SetFrameStrata("MEDIUM")

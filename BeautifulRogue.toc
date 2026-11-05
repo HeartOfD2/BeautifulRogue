@@ -1,17 +1,18 @@
 ## Interface: 16001
-## Title: EverFrame
-## Notes: Combat frame for health, resource, combo points, range, threat, cooldowns and the global cooldown, plus macro manager with assistant, notes, a cursor ring, damage numbers, camera zoom, chat tools and a rogue module.
-## Notes-deDE: Kampfanzeige für Leben, Ressource, Combo-Punkte, Reichweite, Bedrohung, Cooldowns und den globalen Cooldown, dazu Makro-Manager mit Assistent, Notizen, Cursor-Ring, Schadenszahlen, Kamera-Zoom, Chat-Werkzeuge und ein Schurken-Modul.
+## Title: BeautifulRogue
+## Notes: Combat frame for health, resource, combo points, range, threat, cooldowns, the global cooldown and swing timer, plus macro manager with assistant, notes, a cursor ring, damage numbers, camera zoom, chat tools and a rogue module.
+## Notes-deDE: Kampfanzeige für Leben, Ressource, Combo-Punkte, Reichweite, Bedrohung, Cooldowns, den globalen Cooldown und die Swing-Leiste, dazu Makro-Manager mit Assistent, Notizen, Cursor-Ring, Schadenszahlen, Kamera-Zoom, Chat-Werkzeuge und ein Schurken-Modul.
 ## Author: HeartOfD2
-## Version: 1.0.0
+## Version: 1.1.0
 ## X-License: MIT
 ## X-Curse-Project-ID: 1729015
-## X-Website: https://github.com/HeartOfD2/EverFrame
-## IconTexture: Interface\AddOns\EverFrame\Media\Icon
+## X-Website: https://github.com/HeartOfD2/BeautifulRogue
+## IconTexture: Interface\AddOns\BeautifulRogue\Media\Icon
 ## Category: Combat
 ## Category-deDE: Kampf
-## SavedVariables: EverFrameDB
-## SavedVariablesPerCharacter: EverFrameCharDB
+## SavedVariables: BeautifulRogueDB
+## SavedVariablesPerCharacter: BeautifulRogueCharDB
+## OptionalDeps: EverFrame
 
 Core\Init.lua
 Core\Module.lua
@@ -43,6 +44,7 @@ Core\Elements\Bars.lua
 Core\Elements\ComboPoints.lua
 Core\Elements\Range.lua
 Core\Elements\Threat.lua
+Core\Elements\Swing.lua
 Core\Elements\Cooldowns.lua
 Core\Elements\CooldownLayout.lua
 Core\Elements\CooldownSwipes.lua

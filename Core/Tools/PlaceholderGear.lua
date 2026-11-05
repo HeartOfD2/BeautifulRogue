@@ -72,7 +72,7 @@ end
 -- ---------------------------------------------------------------------------
 local dlg, draft
 local function BuildDialog()
-    dlg = UI.Window("EverFrameGearDialog", 470, 236, L["New gear"], { strata = "FULLSCREEN_DIALOG" })
+    dlg = UI.Window("BeautifulRogueGearDialog", 470, 236, L["New gear"], { strata = "FULLSCREEN_DIALOG" })
     dlg.text = UI.Hint(dlg, "", 442)
     dlg.text:SetPoint("TOPLEFT", 14, -36)
     ns.Color(dlg.text, T.text)

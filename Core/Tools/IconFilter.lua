@@ -1,7 +1,7 @@
 -- ---------------------------------------------------------------------------
 -- Macro Manager: icon names and categories for the icon picker.
 -- The data (public domain) lives in the load-on-demand addon
--- EverFrame_IconData and is only loaded when the picker opens. Categories are
+-- BeautifulRogue_IconData and is only loaded when the picker opens. Categories are
 -- bit fields in the per-icon "tags" list: every icon owns `stride` consecutive
 -- 32-bit numbers, category N is bit (N % 32) of number (N // 32) + 1.
 -- No UI here; MacroIcons.lua drives it.
@@ -10,7 +10,7 @@ local _, ns = ...
 local IconFilter = {}
 ns.IconFilter = IconFilter
 
-local ADDON = "EverFrame_IconData"
+local ADDON = "BeautifulRogue_IconData"
 local FIELD_WIDTH = 32
 local FILE_ID_LIMIT = 0x04000000   -- bigger IDs are atlases, not texture files
 local STEP = 3000                  -- icons checked per frame
@@ -23,7 +23,7 @@ function IconFilter.Load()
     if loadFailed then return false end
     local load = (C_AddOns and C_AddOns.LoadAddOn) or LoadAddOn -- lint:ignore
     if load then pcall(load, ADDON) end
-    local d = _G.EverFrameIconData
+    local d = _G.BeautifulRogueIconData
     if type(d) ~= "table" or type(d.id) ~= "table" or type(d.name) ~= "table"
         or type(d.tags) ~= "table" or type(d.categories) ~= "table" then
         loadFailed = true

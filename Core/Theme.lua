@@ -271,7 +271,7 @@ local function Family(size, flags)
         for _, s in ipairs(OTHER_SCRIPTS) do
             members[#members + 1] = { alphabet = s[1], file = s[2], height = size, flags = flags }
         end
-        local name = ("EverFrameFont%d%s_%d"):format(size, (flags:gsub("%W", "")), fontGeneration)
+        local name = ("BeautifulRogueFont%d%s_%d"):format(size, (flags:gsub("%W", "")), fontGeneration)
         local ok, fam = pcall(CreateFontFamily, name, members)
         families[key] = (ok and fam) or false
     end
@@ -282,7 +282,7 @@ end
 local usableCache = {}
 function ns.FontUsable(path)
     if usableCache[path] ~= nil then return usableCache[path] end
-    local ok, res = pcall(function() return CreateFont("EverFrameFontProbe"):SetFont(path, 12, "") end)
+    local ok, res = pcall(function() return CreateFont("BeautifulRogueFontProbe"):SetFont(path, 12, "") end)
     usableCache[path] = ok and res ~= false
     return usableCache[path]
 end

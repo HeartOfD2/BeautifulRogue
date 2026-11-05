@@ -44,8 +44,17 @@ function ns.SpellIcon(id)
     return GetSpellTexture and GetSpellTexture(id) or nil
 end
 
+-- Known spell. C_SpellBook.IsSpellKnown is the only reliable source on this client: the globals IsPlayerSpell and
+-- IsSpellKnown are deprecation fallbacks and exist only while the loadDeprecationFallbacks CVar is on, so they stay
+-- behind it as the path for other client generations. Plain IsSpellKnown, not IsSpellKnownOrInSpellBook: the rank
+-- picker (CooldownRanks) asks per rank id and must not be told a lower rank is known because a higher one overrides it.
 function ns.IsKnown(id)
-    return (IsPlayerSpell and IsPlayerSpell(id)) or (IsSpellKnown and IsSpellKnown(id)) or false
+    if not id then return false end
+    if C_SpellBook and C_SpellBook.IsSpellKnown then
+        local ok, known = pcall(C_SpellBook.IsSpellKnown, id)
+        if ok then return known == true end
+    end
+    return (IsPlayerSpell and IsPlayerSpell(id)) or (IsSpellKnown and IsSpellKnown(id)) or false   -- lint:ignore (guarded fallback for other client generations)
 end
 
 -- true when any of the ranks is learned

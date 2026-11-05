@@ -138,7 +138,7 @@ end
 local OpenChoice
 
 local function MakeButton(hand, tile)
-    local b = CreateFrame("Button", "EverFramePoison" .. hand, HUD.frame, "SecureActionButtonTemplate")
+    local b = CreateFrame("Button", "BeautifulRoguePoison" .. hand, HUD.frame, "SecureActionButtonTemplate")
     b:SetSize(TILE_H - 6, TILE_H - 6)
     b:SetFrameLevel(tile:GetFrameLevel() + 2)
     b:RegisterForClicks("AnyDown")   -- this client only runs secure actions on press

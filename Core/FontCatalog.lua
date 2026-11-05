@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- Font catalog: every font EverFrame ships (plus the game's Arial Narrow), with what
+-- Font catalog: every font BeautifulRogue ships (plus the game's Arial Narrow), with what
 -- it can show and what it is good for.
 --   coverage  "full" = German letters, Latin-1 and Latin Extended-A complete enough for
 --             any text; "limited" = decorative sets with gaps (tools/font_coverage.py
@@ -12,7 +12,7 @@
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 
-local DIR = "Interface\\AddOns\\EverFrame\\Media\\Fonts\\"
+local DIR = "Interface\\AddOns\\BeautifulRogue\\Media\\Fonts\\"
 
 -- file = nil means ns.FONT_DEFAULT (the game's Arial Narrow, set in Theme.lua)
 ns.FONT_CATALOG = {

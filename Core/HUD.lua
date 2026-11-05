@@ -13,7 +13,7 @@ local W, GAP = 220, 4
 local HUD = { elements = {}, byKey = {}, WIDTH = W, GAP = GAP }
 ns.HUD = HUD
 
-local f = CreateFrame("Frame", "EverFrameHUD", UIParent)
+local f = CreateFrame("Frame", "BeautifulRogueHUD", UIParent)
 f:SetSize(W, 40)
 -- optional backdrop behind the whole stack
 f.backdrop = CreateFrame("Frame", nil, f)
@@ -189,6 +189,14 @@ end
 function HUD:IsAvailable(def)
     if not def.IsAvailable then return true end
     return def:IsAvailable()
+end
+
+-- the Layout page keeps the frame in sight and lets parts show a sample (HUD.preview)
+function HUD:SetPreview(on)
+    on = on and true or false
+    if self.preview == on then return end
+    self.preview = on
+    ns.Fire("HUD_PREVIEW_CHANGED", on)
 end
 
 function HUD:IsHidden(key)

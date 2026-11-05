@@ -18,7 +18,7 @@ local view = {}
 local scroll = 0
 local target, onInsert
 
-local win = UI.Window("EverFrameSpellSearch", W, H, L["Find spell"], { strata = "FULLSCREEN" })
+local win = UI.Window("BeautifulRogueSpellSearch", W, H, L["Find spell"], { strata = "FULLSCREEN" })
 win:SetClampedToScreen(true)
 
 local search = UI.LineEdit(win, 13)
@@ -139,7 +139,7 @@ function SpellSearch.Open(edit, insertFn)
     target, onInsert = edit, insertFn
     Read()
     win:ClearAllPoints()
-    local app = _G.EverFrameApp
+    local app = _G.BeautifulRogueApp
     if app and app:IsShown() then
         win:SetPoint("TOPLEFT", app, "TOPRIGHT", 6, 0)
     else

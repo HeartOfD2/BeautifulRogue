@@ -150,7 +150,7 @@ function Copy.Refresh()
 end
 
 local function BuildWindow()
-    win = UI.Window("EverFrameChatCopy", 680, 480, L["Copy chat"])
+    win = UI.Window("BeautifulRogueChatCopy", 680, 480, L["Copy chat"])
     win:SetPoint("CENTER")
 
     win.search = UI.LineEdit(win, 12, 60)

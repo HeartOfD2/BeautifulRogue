@@ -90,7 +90,7 @@ local layer = Notes.Layer("stickies")
 
 local function Create()
     local i = #frames + 1
-    local f = CreateFrame("Frame", "EverFrameSticky" .. i, layer)
+    local f = CreateFrame("Frame", "BeautifulRogueSticky" .. i, layer)
     f:SetFrameStrata("MEDIUM")
     f:SetToplevel(true)
     f:SetMovable(true)

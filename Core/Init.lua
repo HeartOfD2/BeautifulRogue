@@ -1,12 +1,12 @@
 -- ---------------------------------------------------------------------------
--- EverFrame: namespace, event dispatch, internal messages, chat output and
+-- BeautifulRogue: namespace, event dispatch, internal messages, chat output and
 -- the login lifecycle. Every other file builds on what this one sets up.
 -- (Modules: Core/Module.lua.)
 -- ---------------------------------------------------------------------------
 local ADDON, ns = ...
 
 ns.ADDON = ADDON
-ns.TITLE = "EverFrame"
+ns.TITLE = "BeautifulRogue"
 ns.LOCALE = GetLocale and GetLocale() or "enUS"
 
 do
@@ -115,6 +115,19 @@ ns.RegisterEvent("ADDON_LOADED", function(_, name)
     ns.Fire("DB_READY")
 end)
 
+-- The former name EverFrame: one chat line after the takeover of its settings, and a hint while the old addon (not
+-- the small transfer folder "EverFrame" of the package, which says X-Transfer in its TOC) still runs.
+function ns.NoticeFormerName()
+    local A = C_AddOns
+    local loaded = A and A.IsAddOnLoaded and A.IsAddOnLoaded("EverFrame")
+    local transfer = A and A.GetAddOnMetadata and A.GetAddOnMetadata("EverFrame", "X-Transfer")
+    if loaded and not transfer then
+        ns.Print(ns.L["EverFrame is now BeautifulRogue. Please disable the old addon EverFrame and reload."])
+    elseif ns.tookOverEverFrame then
+        ns.Print(ns.L["EverFrame is now BeautifulRogue: your settings were taken over."])
+    end
+end
+
 ns.RegisterEvent("PLAYER_LOGIN", function()
     if not ns.dbReady then   -- should not happen, but never run without settings
         ns.dbReady = true
@@ -122,6 +135,7 @@ ns.RegisterEvent("PLAYER_LOGIN", function()
         ns.Fire("DB_READY")
     end
     ReadPlayer()
+    ns.NoticeFormerName()
     ns.ready = true
     ns.Fire("LOGIN")
     ns.RefreshModules()

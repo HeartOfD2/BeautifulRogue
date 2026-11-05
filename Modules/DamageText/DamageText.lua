@@ -7,7 +7,7 @@
 --                  gravity and duration (live)
 --   scrolling text SetFont on the client's own font objects
 -- The module reads no combat values and no combat log; it only sets fonts and CVars.
--- Settings are account-wide (EverFrameDB.damageText) because the CVars are. The names
+-- Settings are account-wide (BeautifulRogueDB.damageText) because the CVars are. The names
 -- of the global, the CVars and the font objects can differ between clients:
 -- every one is checked for existence and called under pcall.
 -- ---------------------------------------------------------------------------

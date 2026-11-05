@@ -10,7 +10,7 @@ local T, Skin, Text, UI = ns.T, ns.Skin, ns.Text, ns.UI
 -- get() -> color or nil (= default), set(color or nil); fallback = the default
 -- ---------------------------------------------------------------------------
 do
-    local pop = CreateFrame("Frame", "EverFrameColorPopover", UIParent)
+    local pop = CreateFrame("Frame", "BeautifulRogueColorPopover", UIParent)
     pop:SetFrameStrata("TOOLTIP")
     pop:EnableMouse(true)
     pop:Hide()

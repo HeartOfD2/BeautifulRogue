@@ -109,9 +109,11 @@ ns.AddCommand({ "help", "?" }, function()
     for line in (ns.CommandHelpText() .. "\n"):gmatch("(.-)\n") do print("   " .. line) end
 end)
 
-SLASH_EVERFRAME1 = "/ef"
-SLASH_EVERFRAME2 = "/everframe"
-SlashCmdList.EVERFRAME = function(msg)
+SLASH_BEAUTIFULROGUE1 = "/brogue"
+SLASH_BEAUTIFULROGUE2 = "/beautifulrogue"
+SLASH_BEAUTIFULROGUE3 = "/ef" -- the commands of the former name EverFrame keep working
+SLASH_BEAUTIFULROGUE4 = "/everframe"
+SlashCmdList.BEAUTIFULROGUE = function(msg)
     msg = ns.Trim(msg or "")
     local cmd, arg = msg:match("^(%S*)%s*(.-)$")
     cmd = ns.Fold(cmd or "")

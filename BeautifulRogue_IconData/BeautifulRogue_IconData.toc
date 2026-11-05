@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: BeautifulRogue Icon Data
+## IconTexture: Interface\AddOns\BeautifulRogue\Media\Icon
+## Notes: Icon names and categories for the BeautifulRogue macro icon picker. Loads on demand.
+## Notes-deDE: Icon-Namen und Kategorien für den Makro-Icon-Picker von BeautifulRogue. Wird bei Bedarf geladen.
+## Author: HeartOfD2
+## Version: @project-version@
+## Dependencies: BeautifulRogue
+## LoadOnDemand: 1
+## X-License: Unlicense
+
+IconData.lua

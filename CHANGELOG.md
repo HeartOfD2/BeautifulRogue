@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 (2026-11-05)
+
+- **The icon list matches this game again.** The macro icon picker's data had been built from a Retail client: it offered about 2,500 icons World of Warcraft: Forever does not have (they showed as empty tiles) and was missing the ones Forever brought. It is now built from the Forever client, 30,550 icons.
+- **Spells count as learned again.** Whether you know a spell was asked through two functions the game only keeps while its fallbacks for retired code are switched on. With them off nothing counted as learned, so the cooldown bars, the rank a bar picks, the range display, Slice and Dice and the dual-wield placeholder all went quiet. The spellbook is now asked directly.
+- **New name: BeautifulRogue** (formerly EverFrame), with the rogue of the very first version back as its logo. Your settings are taken over on the first start; the package carries a small `EverFrame` folder for that, which you may delete afterwards. `/brogue` opens the window, `/ef` keeps working.
+- **Reordering by dragging**: the up/down arrows in the Layout part list, the Cooldowns list and the macro assistant are gone. Every row has a drag handle (three lines): hold the left mouse button on it and move up or down. The row lifts off the list as a floating card with an accent edge and a soft shadow while its place stays as a dimmed slot; the Layout list scrolls when you reach its edge. Cooldown entries move within their own bar.
+- **Swing timer**: up to three thin bars at the HUD (main hand, off hand, ranged) that fill between two swings or shots, driven by the game's swing event. Each bar can be switched off and has its own color; height, colored edge and a see-through background are shared (HUD › Layout › Swing timer; untick the part in the list to hide it). Off hand and ranged get their space only with a weapon in that slot (or once the game has reported such a swing). A finished bar stays full while you fight with a target and dims when the target is out of reach. The Layout page shows a sample while it is open.
+
 ## 1.0.0 (2026-10-13)
 
 First stable release for World of Warcraft: Forever. EverFrame is now a complete combat frame for every class with macro tools, notes and a set of extras, and it is no longer a beta. Install both folders, `EverFrame` and `EverFrame_IconData`, in `Interface\AddOns`.

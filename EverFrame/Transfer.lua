@@ -1,0 +1,2 @@
+-- Former name of BeautifulRogue. This addon only loads the saved variables of EverFrame (see the TOC) so that
+-- BeautifulRogue can take them over on its first start (Core\Database.lua). It runs no code of its own.

@@ -86,7 +86,7 @@ local EXTRA_TIP = {
 -- ---------------------------------------------------------------------------
 -- Window
 -- ---------------------------------------------------------------------------
-local win = UI.Window("EverFrameMacroAssistant", W, H, L["Macro assistant"], { strata = "FULLSCREEN" })
+local win = UI.Window("BeautifulRogueMacroAssistant", W, H, L["Macro assistant"], { strata = "FULLSCREEN" })
 local Status = UI.StatusLine(win)
 local Refresh
 
@@ -258,15 +258,31 @@ for i = 1, MAX_ENTRIES do
     r.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     r.name = Text(r, 12)
     r.name:SetPoint("LEFT", 46, 0)
-    r.name:SetPoint("RIGHT", -70, 0)
+    r.name:SetPoint("RIGHT", -50, 0)
     r.name:SetJustifyH("LEFT")
     r.name:SetWordWrap(false)
-    r.up = UI.ArrowButton(r, true, function() Move(i, -1) end)
-    r.up:SetSize(16, 16)
-    r.up:SetPoint("RIGHT", -44, 0)
-    r.down = UI.ArrowButton(r, false, function() Move(i, 1) end)
-    r.down:SetSize(16, 16)
-    r.down:SetPoint("RIGHT", -26, 0)
+    r.hl = r:CreateTexture(nil, "BACKGROUND")   -- marks the entry being dragged
+    r.hl:SetAllPoints()
+    ns.Color(r.hl, T.accentSoft)
+    r.hl:Hide()
+    -- drag the grip up or down; the entries are the items of st.entries
+    r.grip = UI.DragHandle(r, {
+        key = function() return st.entries[i] end,
+        indexOf = function(entry) return ns.IndexOf(st.entries, entry) end,
+        targetAt = function()
+            local top = entryPanel:GetTop()
+            if not top then return end
+            local slot = math.floor((top - UI.CursorY(entryPanel)) / ENTRY_H) + 1
+            return math.max(1, math.min(#st.entries, slot))
+        end,
+        move = function(entry, dir) Move(ns.IndexOf(st.entries, entry), dir) end,
+        start = function() Refresh(true) end,
+        done = function() Refresh(true) end,
+        ghost = function(entry)
+            return EntryName(entry), entry.spell and ns.SpellIcon(entry.spell) or (entry.item and ns.ItemIcon(entry.item)) or Macros.QUESTION_ICON
+        end,
+    })
+    r.grip:SetPoint("RIGHT", -26, 0)
     r.del = UI.Button(r, 16, "×", function() table.remove(st.entries, i) Refresh() end, 16)
     r.del:SetPoint("RIGHT", -6, 0)
     entryRows[i] = r
@@ -398,8 +414,8 @@ Refresh = function(keepStatus)
             r.num:SetText(i)
             r.icon:SetTexture(e.spell and ns.SpellIcon(e.spell) or (e.item and ns.ItemIcon(e.item)) or Macros.QUESTION_ICON)
             r.name:SetText(EntryName(e))
-            r.up:SetAlpha(i > 1 and 1 or 0.3)
-            r.down:SetAlpha(i < #st.entries and 1 or 0.3)
+            r.hl:SetShown(UI.dragKey == e)
+            r:SetAlpha(UI.dragKey == e and 0.4 or 1)
             r:Show()
         else
             r:Hide()

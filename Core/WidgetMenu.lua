@@ -10,7 +10,7 @@ local T, Skin, Text, UI = ns.T, ns.Skin, ns.Text, ns.UI
 -- ---------------------------------------------------------------------------
 do
     local ROW_H, PAD = 20, 4
-    local menu = CreateFrame("Frame", "EverFrameMenu", UIParent)
+    local menu = CreateFrame("Frame", "BeautifulRogueMenu", UIParent)
     menu:SetFrameStrata("TOOLTIP")
     menu:EnableMouse(true)
     menu:Hide()

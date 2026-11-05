@@ -3,7 +3,7 @@
 -- On by default, but every function has its own switch that is OFF until the player
 -- turns it on: an active module alone hooks nothing and replaces nothing.
 -- Other files add their tab with Misc.AddTab(key, label, Build, order); the page needs
--- no change for a new tab. Function options are account-wide (EverFrameDB.misc).
+-- no change for a new tab. Function options are account-wide (BeautifulRogueDB.misc).
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 local L = ns.L

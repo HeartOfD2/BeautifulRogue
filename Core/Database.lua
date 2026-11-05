@@ -1,8 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- Saved settings.
---   EverFrameDB       account-wide: minimap button, templates, data of the
+--   BeautifulRogueDB       account-wide: minimap button, templates, data of the
 --                     modules that serve every character (e.g. their notes)
---   EverFrameCharDB   per character: HUD, layout, cooldowns, texts,
+--   BeautifulRogueCharDB   per character: HUD, layout, cooldowns, texts,
 --                     modules (each character has its own class)
 -- Reset categories are registered here; the options' Reset tab lists them.
 -- ---------------------------------------------------------------------------
@@ -67,6 +67,7 @@ local function CharDefaults()
         cooldowns = { order = nil, hidden = {}, shown = {}, bar = {}, bars = 1, custom = {} },
         text = { health = "{cur} ({pct}%)", power = "{cur}" },
         range = { interval = 0.2 },
+        swing = { seen = {} },   -- swing bars (off hand, ranged) the game has reported for this character
         modules = {},
         ui = {},
     }
@@ -101,15 +102,38 @@ local function Migrate(db, steps)
     db.v = DB_VERSION
 end
 
+local function DeepCopy(v)
+    if type(v) ~= "table" then return v end
+    local out = {}
+    for k, x in pairs(v) do out[DeepCopy(k)] = DeepCopy(x) end
+    return out
+end
+
+-- The addon was called EverFrame up to 1.0. Its saved data is loaded by the small "EverFrame" folder in the package
+-- (or by the old addon while it is still installed) and taken over once, when nothing of our own is saved yet.
+local function TakeOverEverFrame()
+    local took = false
+    if type(BeautifulRogueDB) ~= "table" and type(EverFrameDB) == "table" then
+        BeautifulRogueDB = DeepCopy(EverFrameDB)
+        took = true
+    end
+    if type(BeautifulRogueCharDB) ~= "table" and type(EverFrameCharDB) == "table" then
+        BeautifulRogueCharDB = DeepCopy(EverFrameCharDB)
+        took = true
+    end
+    ns.tookOverEverFrame = took
+end
+
 function ns.InitDatabase()
-    if type(EverFrameDB) ~= "table" then EverFrameDB = {} end
-    if type(EverFrameCharDB) ~= "table" then EverFrameCharDB = {} end
-    Migrate(EverFrameDB, MIGRATIONS.acct)
-    Migrate(EverFrameCharDB, MIGRATIONS.char)
-    Merge(EverFrameDB, AcctDefaults())
-    Merge(EverFrameCharDB, CharDefaults())
+    TakeOverEverFrame()
+    if type(BeautifulRogueDB) ~= "table" then BeautifulRogueDB = {} end
+    if type(BeautifulRogueCharDB) ~= "table" then BeautifulRogueCharDB = {} end
+    Migrate(BeautifulRogueDB, MIGRATIONS.acct)
+    Migrate(BeautifulRogueCharDB, MIGRATIONS.char)
+    Merge(BeautifulRogueDB, AcctDefaults())
+    Merge(BeautifulRogueCharDB, CharDefaults())
     -- early test builds had a single "hide out of combat" switch
-    local h = EverFrameCharDB.hud
+    local h = BeautifulRogueCharDB.hud
     if h.hideOOC ~= nil then
         if h.hideOOC then h.hide = "combat" end
         h.hideOOC = nil
@@ -119,12 +143,12 @@ end
 -- before ADDON_LOADED (only during file load) the defaults stand in
 local fallbackChar, fallbackAcct
 function ns.Char()
-    if type(EverFrameCharDB) == "table" and ns.dbReady then return EverFrameCharDB end
+    if type(BeautifulRogueCharDB) == "table" and ns.dbReady then return BeautifulRogueCharDB end
     fallbackChar = fallbackChar or CharDefaults()
     return fallbackChar
 end
 function ns.Acct()
-    if type(EverFrameDB) == "table" and ns.dbReady then return EverFrameDB end
+    if type(BeautifulRogueDB) == "table" and ns.dbReady then return BeautifulRogueDB end
     fallbackAcct = fallbackAcct or AcctDefaults()
     return fallbackAcct
 end
@@ -203,7 +227,7 @@ do
             ns.ApplyTheme()
         end })
     ns.RegisterReset({ key = "windows", group = "addon", order = 85, label = L["Window positions"], accountWide = true,
-        desc = L["Position and size of the app window and the other EverFrame windows."],
+        desc = L["Position and size of the app window and the other BeautifulRogue windows."],
         -- modules put their own windows back on SETTINGS_RESET (keys.windows)
         reset = function() ns.Acct().app = nil end })
 end

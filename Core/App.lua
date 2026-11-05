@@ -125,7 +125,7 @@ end
 
 local function Build()
     if win then return end
-    win = CreateFrame("Frame", "EverFrameApp", UIParent)
+    win = CreateFrame("Frame", "BeautifulRogueApp", UIParent)
     win:SetFrameStrata("DIALOG")
     win:SetToplevel(true)
     win:EnableMouse(true)
@@ -135,7 +135,7 @@ local function Build()
     if win.SetResizeBounds then win:SetResizeBounds(APP_W, APP_H, 1600, 1100) end
     win:Hide()
     ns.Skin(win, T.window)
-    table.insert(UISpecialFrames, "EverFrameApp")
+    table.insert(UISpecialFrames, "BeautifulRogueApp")
 
     -- header ------------------------------------------------------------------
     local header = CreateFrame("Frame", nil, win)

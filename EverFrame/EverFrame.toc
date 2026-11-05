@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: EverFrame (settings for BeautifulRogue)
+## Title-deDE: EverFrame (Einstellungen für BeautifulRogue)
+## Notes: EverFrame is now called BeautifulRogue. This folder only keeps your EverFrame settings so BeautifulRogue can take them over; it does nothing else.
+## Notes-deDE: EverFrame heißt jetzt BeautifulRogue. Dieser Ordner hält nur deine EverFrame-Einstellungen bereit, damit BeautifulRogue sie übernehmen kann; sonst tut er nichts.
+## Author: HeartOfD2
+## Version: @project-version@
+## IconTexture: Interface\AddOns\BeautifulRogue\Media\Icon
+## X-Transfer: BeautifulRogue
+## SavedVariables: EverFrameDB
+## SavedVariablesPerCharacter: EverFrameCharDB
+
+Transfer.lua

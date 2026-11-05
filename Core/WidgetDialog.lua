@@ -13,7 +13,7 @@ local T, Skin, Text, UI = ns.T, ns.Skin, ns.Text, ns.UI
 -- it, but runs when the game's function is the handler.
 -- ---------------------------------------------------------------------------
 do
-    local box = CreateFrame("Frame", "EverFrameMessageBox", UIParent)
+    local box = CreateFrame("Frame", "BeautifulRogueMessageBox", UIParent)
     box:SetSize(400, 190)
     box:SetPoint("CENTER", UIParent, "CENTER", 0, 180)
     box:SetFrameStrata("FULLSCREEN_DIALOG")   -- above the app window (DIALOG)
@@ -30,7 +30,7 @@ do
     strip:SetPoint("TOPRIGHT")
     strip:SetHeight(2)
     ns.Color(strip, T.accent)
-    table.insert(UISpecialFrames, "EverFrameMessageBox")
+    table.insert(UISpecialFrames, "BeautifulRogueMessageBox")
     box.title = Text(box, 14)
     box.title:SetPoint("TOPLEFT", 16, -14)
     ns.Color(box.title, T.accent)

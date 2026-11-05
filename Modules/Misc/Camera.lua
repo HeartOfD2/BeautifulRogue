@@ -163,8 +163,8 @@ local function BindWheel()
             binder:UnregisterEvent("PLAYER_REGEN_ENABLED")
             if bindPending then bindPending = false; Misc:Apply() end
         end)
-        btnIn = CreateFrame("Button", "EverFrameZoomIn", UIParent)
-        btnOut = CreateFrame("Button", "EverFrameZoomOut", UIParent)
+        btnIn = CreateFrame("Button", "BeautifulRogueZoomIn", UIParent)
+        btnOut = CreateFrame("Button", "BeautifulRogueZoomOut", UIParent)
         for dir, b in pairs({ [-1] = btnIn, [1] = btnOut }) do
             b:RegisterForClicks("AnyDown", "AnyUp")
             b:SetScript("OnClick", Click(dir))
@@ -176,7 +176,7 @@ local function BindWheel()
         return
     end
     ClearOverrideBindings(binder)
-    for action, name in pairs({ CAMERAZOOMIN = "EverFrameZoomIn", CAMERAZOOMOUT = "EverFrameZoomOut" }) do
+    for action, name in pairs({ CAMERAZOOMIN = "BeautifulRogueZoomIn", CAMERAZOOMOUT = "BeautifulRogueZoomOut" }) do
         for _, key in ipairs({ GetBindingKey(action) }) do
             SetOverrideBindingClick(binder, true, key, name, "LeftButton")
         end

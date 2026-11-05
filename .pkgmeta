@@ -1,7 +1,8 @@
-package-as: EverFrame
+package-as: BeautifulRogue
 
 move-folders:
-  EverFrame/EverFrame_IconData: EverFrame_IconData
+  BeautifulRogue/BeautifulRogue_IconData: BeautifulRogue_IconData
+  BeautifulRogue/EverFrame: EverFrame
 
 ignore:
   - docs

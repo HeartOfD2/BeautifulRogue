@@ -24,8 +24,8 @@ local function StyleField(key, field)
 end
 
 local function BuildLayout(p)
-    HUD.preview = true
-    layoutPage.OnHide = function() HUD.preview = false end
+    HUD:SetPreview(true)
+    layoutPage.OnHide = function() HUD:SetPreview(false) end
     local selected = "frame"
     local panels, rows = {}, {}
     local Select
@@ -87,8 +87,37 @@ local function BuildLayout(p)
             end)
             row.check = check
             row.label:SetPoint("LEFT", 30, 0)
-            row.down = UI.ArrowButton(row, false, function() HUD:Move(row.key, 1) layoutPage.Refresh() end)
-            row.down:SetPoint("RIGHT", -2, 0)
+            -- drag the grip up or down to move the part; the list scrolls when the pointer leaves it
+            row.grip = UI.DragHandle(row, {
+                key = function() return row.key ~= "frame" and row.key or nil end,
+                indexOf = function(key) return ns.IndexOf(HUD:VisibleOrder(), key) end,
+                targetAt = function()
+                    local top = list:GetTop()
+                    if not top then return end
+                    local slot = math.floor((top - 4 - UI.CursorY(list)) / ROW_H)   -- 0 = the Frame row
+                    slot = math.max(1, math.min(VIEW_ROWS, slot))
+                    return math.min(#HUD:VisibleOrder(), scroll + slot)
+                end,
+                move = function(key, dir) HUD:Move(key, dir) layoutPage.Refresh() end,
+                edge = function()
+                    local top = list:GetTop()
+                    local now = GetTime()
+                    if not top or now < (list.scrollAt or 0) then return end
+                    local y = UI.CursorY(list)
+                    local first = top - 4 - ROW_H           -- top of the first part row
+                    local last = first - VIEW_ROWS * ROW_H  -- bottom of the last one
+                    local before = scroll
+                    if y > first then scroll = scroll - 1 elseif y < last then scroll = scroll + 1 end
+                    if scroll ~= before then
+                        list.scrollAt = now + 0.12
+                        layoutPage.Refresh()
+                    end
+                end,
+                start = function(key) Select(key) end,
+                done = function() layoutPage.Refresh() end,
+                ghost = function(key) return HUD.byKey[key] and HUD.byKey[key].label or "" end,
+            })
+            row.grip:SetPoint("RIGHT", -2, 0)
             -- cooldown bars: × takes the bar away (click twice, like the reset buttons)
             row.remove = UI.Button(row, 18, "×", function()
                 local bar = HUD.byKey[row.key] and HUD.byKey[row.key].cooldownBar
@@ -105,9 +134,7 @@ local function BuildLayout(p)
             row.remove:SetPoint("RIGHT", -2, 0)
             UI.Tooltip(row.remove, { L["Remove this cooldown bar"],
                 L["Click twice. Its cooldowns move to the neighbour bar; the bars behind it move up."] })
-            row.up = UI.ArrowButton(row, true, function() HUD:Move(row.key, -1) layoutPage.Refresh() end)
-            row.up:SetPoint("RIGHT", row.down, "LEFT", -2, 0)
-            row.hint:SetPoint("RIGHT", row.up, "LEFT", -6, 0)
+            row.hint:SetPoint("RIGHT", row.grip, "LEFT", -6, 0)
         end
         row.label:SetPoint("RIGHT", row.hint, "LEFT", -6, 0)
         row:SetScript("OnClick", function(self) Select(self.key) end)
@@ -439,6 +466,31 @@ local function BuildLayout(p)
         SwatchRow(panel, "gcd", "color", L["Color"], function() return T.accent end)
     end
 
+    -- swing timer
+    do
+        local panel = Panel("swing", L["Swing timer"], L["Thin bars that fill between your swings and shots. Switch it off with the checkbox in the list."])
+        Slider(panel, "swing", "height", L["Height"], 2, 10)
+        EdgeCheck(panel, "swing")
+        do
+            local get, set = StyleField("swing", "clear")
+            local row = UI.CheckRow(panel, L["Transparent background"], function() return get() == true end,
+                function(v) set(v and true or false) end, INS_W)
+            UI.Tooltip(row, { L["Transparent background"], L["Only the filled part stays visible; the dark track behind it is hidden."] })
+            Put(panel, row, 24)
+        end
+        Section(panel, L["BARS"])
+        Check(panel, "swing", "main", L["Main hand"])
+        Check(panel, "swing", "off", L["Off hand"],
+            L["Shows with a weapon in the off hand, or once the game has reported an off-hand swing."])
+        Check(panel, "swing", "ranged", L["Ranged"],
+            L["Shows with a ranged weapon (bow, gun, crossbow, wand, thrown), or once the game has reported a ranged shot."])
+        Section(panel, L["COLOR"])
+        SwatchRow(panel, "swing", "colorMain", L["Main hand"], function() return ns.SwingDefaultColor("main") end)
+        SwatchRow(panel, "swing", "colorOff", L["Off hand"], function() return ns.SwingDefaultColor("off") end)
+        SwatchRow(panel, "swing", "colorRanged", L["Ranged"], function() return ns.SwingDefaultColor("ranged") end)
+        Put(panel, UI.Hint(panel, L["A finished bar stays full while you fight with a target, and dims when the target is out of reach."], INS_W), 30)
+    end
+
     -- combo points
     do
         local panel = Panel("combo", L["Combo points"])
@@ -606,7 +658,7 @@ local function BuildLayout(p)
     end
 
     layoutPage.Refresh = function()
-        HUD.preview = true
+        HUD:SetPreview(true)
         local order = HUD:VisibleOrder()
         if selected ~= "frame" and not ns.IndexOf(order, selected) then selected = "frame" end
         local frameRow = Row(0)
@@ -630,6 +682,7 @@ local function BuildLayout(p)
                 row.label:SetText(def.label)
                 row.check:SetOn(not hidden)
                 row.label:SetAlpha((hidden or not ok) and 0.45 or 1)
+                row:SetAlpha(UI.dragKey == key and 0.4 or 1)   -- the slot of the part being dragged
                 if not ok then
                     row.hint:SetText(why or L["not available"])
                 elseif def.cooldownBar then
@@ -637,12 +690,10 @@ local function BuildLayout(p)
                 else
                     row.hint:SetText("")
                 end
-                row.up.arrow:SetAlpha(scroll + i == 1 and 0.25 or 1)
-                row.down.arrow:SetAlpha(scroll + i == #order and 0.25 or 1)
                 -- cooldown bars carry a × (red after the first click)
                 row.remove:SetShown(def.cooldownBar ~= nil)
-                row.down:ClearAllPoints()
-                row.down:SetPoint("RIGHT", def.cooldownBar and -22 or -2, 0)
+                row.grip:ClearAllPoints()
+                row.grip:SetPoint("RIGHT", def.cooldownBar and -22 or -2, 0)
                 if def.cooldownBar then
                     local on = armed.bar == def.cooldownBar and GetTime() < armed.untilT
                     row.remove.text:SetText(on and ns.Colorize(ns.HEX.alert, "×") or "×")

@@ -58,7 +58,7 @@ local function Build(frame)
             function() return DT:Get(key) end, function(v) DT:Set(key, v) end, W, fmt), x, y)
     end
 
-    Hint(L["The combat numbers themselves are switched on in the game options. EverFrame does not change that option."], 0, 0)
+    Hint(L["The combat numbers themselves are switched on in the game options. BeautifulRogue does not change that option."], 0, 0)
 
     -- floating numbers (left) --------------------------------------------------
     UI.Label(frame, L["FLOATING NUMBERS"], 0, -36)

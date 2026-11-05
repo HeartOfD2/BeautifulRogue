@@ -9,7 +9,7 @@ local L = ns.L
 
 local function DB() return ns.Acct().minimap end
 
-local btn = CreateFrame("Button", "EverFrameMinimapButton", Minimap)
+local btn = CreateFrame("Button", "BeautifulRogueMinimapButton", Minimap)
 btn:SetSize(31, 31)
 btn:SetFrameStrata("MEDIUM")
 btn:SetFrameLevel(8)

@@ -175,12 +175,147 @@ function UI.Arrow(parent, size, dir)
     return t
 end
 
--- small square button with an up/down chevron
-function UI.ArrowButton(parent, up, onClick)
-    local b = UI.Button(parent, 18, "", onClick, 18)
-    b.arrow = UI.Arrow(b, 12, up and "up" or "down")
-    b.arrow:SetPoint("CENTER")
-    return b
+-- the pointer's height in the units of `frame` (to compare with frame:GetTop())
+function UI.CursorY(frame)
+    local _, y = GetCursorPosition()
+    return (y or 0) / (frame:GetEffectiveScale() or 1)
+end
+
+-- Drag handle (three short lines) that puts a list row in a new place: press it, drag up or
+-- down, let go. The list keeps its own way of moving an item one step; the handle only asks
+-- it step by step until the item sits where the pointer is.
+--   spec.key()          the item this row shows (nil: an empty row, nothing to drag)
+--   spec.indexOf(key)   its place in the list now (1 = first)
+--   spec.targetAt()     the place under the pointer (1 .. count), nil when it cannot be told
+--   spec.move(key, dir) one step up (-1) or down (1); redraws the list
+--   spec.edge()         optional, called while dragging: scrolls a list that is longer than its view
+--   spec.start/done()   optional, the list redraws to mark / unmark the item (UI.dragKey)
+--   spec.ghost(key)     optional, text (and icon) of the floating copy that follows the pointer
+-- While dragging, the row keeps its place as a dimmed slot (lists dim the row of UI.dragKey) and a
+-- lifted copy of it (opaque card, accent edge, soft shadow) floats with the pointer.
+UI.dragKey = nil   -- the item being dragged; lists paint its row highlighted
+local dragger, dragging, ghost = CreateFrame("Frame"), nil, nil
+dragger:Hide()
+
+local function MakeGhost()
+    local f = CreateFrame("Frame", nil, UIParent)
+    f:SetFrameStrata("TOOLTIP")
+    f.isDragGhost = true
+    for i = 1, 3 do   -- a soft shadow: three growing plates, shifted down
+        local t = f:CreateTexture(nil, "BACKGROUND", nil, -8)
+        t:SetPoint("TOPLEFT", -i * 2, i * 2 - 4)
+        t:SetPoint("BOTTOMRIGHT", i * 2, -i * 2 - 4)
+        t:SetColorTexture(0, 0, 0, 0.16)
+    end
+    ns.Skin(f, T.popover, T.accent)
+    f.bar = f:CreateTexture(nil, "ARTWORK")   -- accent bar on the left edge
+    f.bar:SetPoint("TOPLEFT")
+    f.bar:SetPoint("BOTTOMLEFT")
+    f.bar:SetWidth(3)
+    ns.Color(f.bar, T.accent)
+    f.icon = f:CreateTexture(nil, "ARTWORK")
+    f.icon:SetSize(18, 18)
+    f.icon:SetPoint("LEFT", 12, 0)
+    f.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    f.text = ns.Text(f, 12)
+    f.text:SetJustifyH("LEFT")
+    f.text:SetWordWrap(false)
+    f:Hide()
+    return f
+end
+
+-- the copy sits over the row the grip belongs to, a little larger, and follows the pointer's height
+local function MoveGhost()
+    if not (ghost and dragging) then return end
+    local row = dragging.row
+    ghost:ClearAllPoints()
+    ghost:SetPoint("LEFT", UIParent, "BOTTOMLEFT", (row:GetLeft() or 0) - 4, UI.CursorY(row))
+end
+
+local function ShowGhost(g, key)
+    ghost = ghost or MakeGhost()
+    local row = g.row
+    ghost:SetScale((row:GetEffectiveScale() or 1) / (UIParent:GetEffectiveScale() or 1))
+    ghost:SetSize((row:GetWidth() or 200) + 8, (row:GetHeight() or 24) + 6)
+    local text, icon
+    if g.spec.ghost then text, icon = g.spec.ghost(key) end
+    ghost.icon:SetShown(icon ~= nil)
+    if icon then ghost.icon:SetTexture(icon) end
+    ghost.text:SetText(text or "")
+    ghost.text:ClearAllPoints()
+    ghost.text:SetPoint("LEFT", icon and 36 or 14, 0)
+    ghost.text:SetPoint("RIGHT", -12, 0)
+    ghost:Show()
+    MoveGhost()
+end
+
+local function StopDrag()
+    local g = dragging
+    if not g then return end
+    dragging, UI.dragKey = nil, nil
+    if ghost then ghost:Hide() end
+    dragger:Hide()
+    dragger:SetScript("OnUpdate", nil)
+    g.hot = g:IsMouseOver()
+    g:Paint()
+    if g.spec.done then g.spec.done() end
+end
+
+local function DragStep()
+    local g = dragging
+    if not g then return end
+    if IsMouseButtonDown and not IsMouseButtonDown("LeftButton") then StopDrag() return end
+    local spec, key = g.spec, UI.dragKey
+    MoveGhost()
+    if spec.edge then spec.edge() end
+    local target = spec.targetAt()
+    for _ = 1, 50 do
+        local cur = target and spec.indexOf(key)
+        if not cur or cur == target then break end
+        local dir = target > cur and 1 or -1
+        spec.move(key, dir)
+        local now = spec.indexOf(key)
+        -- stuck (an edge, or a neighbour in another group) or past the mark: stop
+        if not now or now == cur or (target - now) * dir <= 0 then break end
+    end
+end
+
+function UI.DragHandle(parent, spec)
+    local g = CreateFrame("Frame", nil, parent)
+    g:SetSize(18, 18)
+    g:EnableMouse(true)
+    g.spec = spec
+    g.lines = {}
+    for i = 1, 3 do
+        local t = g:CreateTexture(nil, "OVERLAY")
+        t:SetSize(10, 2)
+        t:SetPoint("CENTER", 0, (2 - i) * 4)
+        g.lines[i] = t
+    end
+    function g:Paint()
+        local c = self.hot and T.accent or T.muted
+        for _, t in ipairs(self.lines) do t:SetColorTexture(c[1], c[2], c[3], 1) end
+    end
+    ns.Paint(function() g:Paint() end)
+    UI.Tooltip(g, { ns.L["Drag to reorder"], ns.L["Hold the left mouse button and move up or down."] })
+    g:HookScript("OnEnter", function() g.hot = true g:Paint() end)
+    g:HookScript("OnLeave", function() g.hot = dragging == g g:Paint() end)
+    g:SetScript("OnMouseDown", function(self, button)
+        if button and button ~= "LeftButton" then return end
+        local key = spec.key()
+        if key == nil then return end
+        dragging, UI.dragKey = self, key
+        self.row = parent
+        self.hot = true
+        self:Paint()
+        if spec.start then spec.start(key) end
+        ShowGhost(self, key)
+        dragger:SetScript("OnUpdate", DragStep)
+        dragger:Show()
+    end)
+    g:SetScript("OnMouseUp", function(self) if dragging == self then StopDrag() end end)
+    g:SetScript("OnHide", function(self) if dragging == self then StopDrag() end end)
+    return g
 end
 
 -- thin scroll bar for a list that shows `view` of `total` items. The list calls

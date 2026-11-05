@@ -175,7 +175,7 @@ local function BuildAbout(p)
     UI.Label(p, L["CREDITS"], 0, -150)
     local credits = UI.Hint(p, table.concat({
         L["Author: %s"]:format("HeartOfD2"),
-        L["License: MIT  ·  Source: github.com/HeartOfD2/EverFrame"],
+        L["License: MIT  ·  Source: github.com/HeartOfD2/BeautifulRogue"],
     }, "\n"), App.CONTENT_W)
     credits:SetPoint("TOPLEFT", 0, -168)
     credits:SetSpacing(4)

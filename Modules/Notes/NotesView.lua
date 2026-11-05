@@ -11,7 +11,7 @@ local Touch, Changed = Notes.Touch, Notes.Changed
 -- ---------------------------------------------------------------------------
 -- Notes page: Notebook (groups) and Players, both as a tree + editor
 -- ---------------------------------------------------------------------------
-local page = CreateFrame("Frame", "EverFrameNotes", UIParent)
+local page = CreateFrame("Frame", "BeautifulRogueNotes", UIParent)
 page:SetSize(App.CONTENT_W, App.CONTENT_H)
 page:Hide()
 local function Status(msg, alert) App.Status(msg, alert) end

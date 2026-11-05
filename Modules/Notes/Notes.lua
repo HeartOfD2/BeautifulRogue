@@ -204,7 +204,7 @@ function Notes.OnChange(fn) listeners[#listeners + 1] = fn end
 -- ---------------------------------------------------------------------------
 local layers = {}
 function Notes.Layer(key)
-    local f = CreateFrame("Frame", "EverFrameNotesLayer_" .. key, UIParent)
+    local f = CreateFrame("Frame", "BeautifulRogueNotesLayer_" .. key, UIParent)
     f:SetAllPoints(UIParent)
     layers[key] = f
     if Notes.UpdateLayers then Notes.UpdateLayers() end

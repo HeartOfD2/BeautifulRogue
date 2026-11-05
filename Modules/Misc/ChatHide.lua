@@ -136,7 +136,7 @@ end
 local btn
 
 local function BuildButton()
-    btn = CreateFrame("Button", "EverFrameChatButton", UIParent)
+    btn = CreateFrame("Button", "BeautifulRogueChatButton", UIParent)
     btn:SetFrameStrata("HIGH")
     btn:SetClampedToScreen(true)
     btn:SetMovable(true)

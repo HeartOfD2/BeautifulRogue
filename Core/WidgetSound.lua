@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- UI: the sound picker. Every place where EverFrame lets you pick a
+-- UI: the sound picker. Every place where BeautifulRogue lets you pick a
 -- sound uses this one control: a field with the chosen sound and a play
 -- button, below it the volume. The field opens a list of every sound the
 -- client has (ns.Sound) with a search and groups by name prefix; a click on a
@@ -113,7 +113,7 @@ end
 
 local function Build()
     if pop then return end
-    pop = CreateFrame("Frame", "EverFrameSoundPicker", UIParent)
+    pop = CreateFrame("Frame", "BeautifulRogueSoundPicker", UIParent)
     pop:SetFrameStrata("FULLSCREEN_DIALOG")   -- under the group menu (TOOLTIP)
     pop:SetSize(POP_W, TOP + VIEW * ROW_H + FOOT)
     pop:SetClampedToScreen(true)

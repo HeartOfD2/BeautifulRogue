@@ -11,7 +11,7 @@ local function BuildCooldowns(p)
     local CD = ns.Cooldowns
     local LIST_ROW_H, ROWS = 24, 11
     UI.Label(p, L["COOLDOWN"], 26, 0)
-    local barLabel = UI.Label(p, L["BAR"], App.CONTENT_W - 154, 0)
+    local barLabel = UI.Label(p, L["BAR"], App.CONTENT_W - 107, 0)
     barLabel:SetWidth(98)
     barLabel:SetJustifyH("CENTER")
     local orderLabel = UI.Label(p, L["ORDER"], 0, 0)
@@ -53,14 +53,11 @@ local function BuildCooldowns(p)
                 row.bg:SetColorTexture(T.hover[1], T.hover[2], T.hover[3], (e.bar % 2 == 0) and T.hover[4] or 0)
                 row.barBtn.text:SetText(L["Bar %d"]:format(e.bar))
                 row.barBtn:SetShown(CD.BarTotal() > 1)   -- with one bar there is nothing to choose
-                local first, last = true, true
-                for _, o in ipairs(entries) do
-                    if o.bar == e.bar and o ~= e then
-                        if o.pos < e.pos then first = false else last = false end
-                    end
+                local lifted = UI.dragKey == e.key   -- the slot of the row being dragged
+                if lifted then
+                    row.bg:SetColorTexture(T.accentSoft[1], T.accentSoft[2], T.accentSoft[3], T.accentSoft[4] or 1)
                 end
-                row.up.arrow:SetAlpha(first and 0.25 or 1)
-                row.down.arrow:SetAlpha(last and 0.25 or 1)
+                row:SetAlpha(lifted and 0.4 or 1)
                 row:Show()
             else
                 row:Hide()
@@ -90,7 +87,7 @@ local function BuildCooldowns(p)
         row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         row.label = ns.Text(row, 12)
         row.label:SetPoint("LEFT", 52, 0)
-        row.label:SetPoint("RIGHT", -146, 0)
+        row.label:SetPoint("RIGHT", -118, 0)
         row.label:SetJustifyH("LEFT")
         row.label:SetWordWrap(false)
         row.remove = UI.Button(row, 18, "×", function()
@@ -101,7 +98,7 @@ local function BuildCooldowns(p)
             Render()
             App.Status(L["Removed %s."]:format(name))
         end, 18)
-        row.remove:SetPoint("RIGHT", -114, 0)
+        row.remove:SetPoint("RIGHT", -92, 0)
         UI.Tooltip(row.remove, { L["Remove"] })
         -- the bar of this cooldown: a list of the character's bars (up to 20)
         row.barBtn = UI.Button(row, 56, "", function(self)
@@ -118,11 +115,56 @@ local function BuildCooldowns(p)
             end
             UI.OpenMenu(self, items)
         end, 18)
-        row.barBtn:SetPoint("RIGHT", -52, 0)
-        row.up = UI.ArrowButton(row, true, function() CD:Move(row.entry.key, -1) Render() end)
-        row.up:SetPoint("RIGHT", -26, 0)
-        row.down = UI.ArrowButton(row, false, function() CD:Move(row.entry.key, 1) Render() end)
-        row.down:SetPoint("RIGHT", -4, 0)
+        row.barBtn:SetPoint("RIGHT", -30, 0)
+        -- drag the grip up or down; an entry only changes places within its own bar
+        row.grip = UI.DragHandle(row, {
+            key = function() return row.entry and row.entry.key end,
+            indexOf = function(key)
+                for n, e in ipairs(entries) do
+                    if e.key == key then return n end
+                end
+            end,
+            targetAt = function()
+                local top = list:GetTop()
+                if not top then return end
+                local slot = math.floor((top - UI.CursorY(list)) / LIST_ROW_H) + 1
+                return math.min(#entries, scroll + math.max(1, math.min(ROWS, slot)))
+            end,
+            -- one step in the list: entries the list does not show (not learned) may sit in between, so go on until it shows
+            move = function(key, dir)
+                local function Shown()
+                    for n, e in ipairs(entries) do
+                        if e.key == key then return n end
+                    end
+                end
+                local before = Shown()
+                for _ = 1, 60 do
+                    local at = ns.IndexOf(CD:Order(), key)
+                    CD:Move(key, dir)
+                    Render()
+                    if Shown() ~= before or ns.IndexOf(CD:Order(), key) == at then break end
+                end
+            end,
+            edge = function()
+                local top = list:GetTop()
+                local now = GetTime()
+                if not top or now < (list.scrollAt or 0) then return end
+                local y, before = UI.CursorY(list), scroll
+                if y > top then scroll = scroll - 1 elseif y < top - ROWS * LIST_ROW_H then scroll = scroll + 1 end
+                if scroll ~= before then
+                    list.scrollAt = now + 0.12
+                    Render()
+                end
+            end,
+            start = function() Render() end,
+            done = function() Render() end,
+            ghost = function(key)
+                for _, e in ipairs(entries) do
+                    if e.key == key then return CD:EntryName(e), e.frame.icon:GetTexture() end
+                end
+            end,
+        })
+        row.grip:SetPoint("RIGHT", -4, 0)
         rows[i] = row
     end
     list:SetScript("OnMouseWheel", function(_, delta)

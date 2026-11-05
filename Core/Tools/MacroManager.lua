@@ -62,7 +62,7 @@ end
 -- ---------------------------------------------------------------------------
 -- Page (built at load, moved into the app window the first time it opens)
 -- ---------------------------------------------------------------------------
-local mm = CreateFrame("Frame", "EverFrameMacroManager", UIParent)
+local mm = CreateFrame("Frame", "BeautifulRogueMacroManager", UIParent)
 mm:SetSize(PAGE_W, PAGE_H)
 mm:Hide()
 Macros.page = mm

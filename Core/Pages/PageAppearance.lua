@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------------------------
--- Settings page "Appearance" (Addon section): how EverFrame itself looks. Dark or light
+-- Settings page "Appearance" (Addon section): how BeautifulRogue itself looks. Dark or light
 -- mode and accent color, the font and the minimap button. All of it is account-wide.
 -- ---------------------------------------------------------------------------
 local _, ns = ...
@@ -65,7 +65,7 @@ local function BuildAppearance(p)
             { { L["Later"] }, { L["Reload now"], ReloadUI, true, true } })
     end, 200)
     fontBox:SetPoint("TOPLEFT", 0, -136)
-    local fontHint = UI.Hint(p, L["Applies to all EverFrame texts after /reload."], COLW)
+    local fontHint = UI.Hint(p, L["Applies to all BeautifulRogue texts after /reload."], COLW)
     fontHint:SetPoint("TOPLEFT", 0, -164)
 
     -- minimap button -----------------------------------------------------------------
