@@ -1,7 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- Macros: what the rest of the addon uses to work with the player's WoW macros
 -- (no interface): limits, name and text helpers, the registries for default
--- templates and header buttons, and creating a macro. The Macro Manager page
+-- templates and header buttons, the macro groups, creating a macro and moving
+-- it between the general and the character list. The Macro Manager page
 -- is MacroManager.lua, its parts are MacroIcons / MacroTransfer / MacroActions.
 --   ns.Macros.RegisterTemplates(group)  default templates of a module: { key,
 --       title, IsActive(), list = { { name, desc, body } }, Fill(body) }
@@ -11,6 +12,7 @@
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 local L = ns.L
+local Groups = ns.Transfer.Groups
 
 local Macros = { templates = {}, actions = {} }
 ns.Macros = Macros
@@ -75,10 +77,29 @@ function Macros.RegisterTemplates(group) table.insert(Macros.templates, group) e
 function Macros.RegisterAction(action) table.insert(Macros.actions, action) end
 
 -- ---------------------------------------------------------------------------
--- Creating a macro from outside (the templates page)
+-- Groups of the two lists (general: account-wide, character: per character)
 -- ---------------------------------------------------------------------------
--- returns the new macro's index, or nil + reason
-function Macros.Create(name, text, perChar)
+-- { names, collapsed, of = { [macro name] = group } }
+function Macros.GroupStore(perChar)
+    local owner = perChar and ns.Char() or ns.Acct()
+    owner.macroGroups = owner.macroGroups or {}
+    local g = owner.macroGroups
+    g.names, g.collapsed, g.of = g.names or {}, g.collapsed or {}, g.of or {}
+    return g
+end
+
+-- puts a macro into a group and creates the group if it isn't there yet
+function Macros.SetGroup(name, perChar, group)
+    local g = Macros.GroupStore(perChar)
+    Groups.Ensure(g, group)
+    g.of[name] = Groups.Stored(group)
+end
+
+-- ---------------------------------------------------------------------------
+-- Creating a macro from outside (the templates page, modules)
+-- ---------------------------------------------------------------------------
+-- icon: nil = the question mark. Returns the new macro's index, or nil + reason
+function Macros.Create(name, text, perChar, icon)
     if ns.InCombat() then return nil, Macros.IN_COMBAT end
     name = Macros.ShortName(ns.Trim(name))
     if name == "" then return nil, L["Enter a name first."] end
@@ -86,8 +107,73 @@ function Macros.Create(name, text, perChar)
     if (perChar and (numChar or 0) >= MAX_CHAR) or (not perChar and (numGeneral or 0) >= CharBase()) then
         return nil, L["This macro list is full."]
     end
-    local ok, idx = pcall(CreateMacro, name, QUESTION_ICON, ns.Utf8Sub(text or "", BODY_MAX), perChar)
+    text = ns.Utf8Sub(text or "", BODY_MAX)
+    local ok, idx = pcall(CreateMacro, name, icon or QUESTION_ICON, text, perChar)
+    if not (ok and idx) and icon then ok, idx = pcall(CreateMacro, name, QUESTION_ICON, text, perChar) end
     if not (ok and idx) then return nil, L["Couldn't create the macro."] end
     return idx
+end
+
+-- ---------------------------------------------------------------------------
+-- Moving a macro to the other list. The game has no call for it: the macro is
+-- created there and deleted here. That takes it off the action bars, so it
+-- goes back onto the same buttons afterwards.
+-- ---------------------------------------------------------------------------
+local MAX_ACTION_SLOT = 180
+
+-- the action slots holding this macro: the id of a macro action isn't always
+-- its index, but its action text is its name
+local function SlotsOf(name)
+    local slots = {}
+    local textOf = (C_ActionBar and C_ActionBar.GetActionText) or GetActionText
+    for slot = 1, MAX_ACTION_SLOT do
+        local kind = GetActionInfo(slot)
+        if not ns.IsSecret(kind) and kind == "macro" then
+            local text = textOf(slot)
+            if not ns.IsSecret(text) and text == name then slots[#slots + 1] = slot end
+        end
+    end
+    return slots
+end
+
+-- GetMacroInfo may report the icon a macro shows right now. A "?" macro shows
+-- its spell or item, and writing that into the copy would pin it: keep the "?"
+local function SavedIcon(index, icon)
+    local spell = GetMacroSpell and GetMacroSpell(index)
+    if spell and ns.SpellIcon(spell) == icon then return QUESTION_ICON end
+    if GetMacroItem then
+        local _, link = GetMacroItem(index)
+        if link and ns.ItemIcon(link) == icon then return QUESTION_ICON end
+    end
+    return icon
+end
+
+-- toChar: true = into the character list, false = into the general list.
+-- The group goes along. Returns the new index and the number of action
+-- buttons it went back onto, or nil + reason.
+function Macros.Move(index, toChar)
+    if ns.InCombat() then return nil, Macros.IN_COMBAT end
+    local name, icon, body = GetMacroInfo(index)
+    if not name then return nil, L["Couldn't create the macro."] end
+    -- one name per list
+    for _, idx in ipairs(Macros.IndicesByName(name)) do
+        if idx ~= index then return nil, L["A macro named \"%s\" exists already."]:format(name) end
+    end
+    local slots = SlotsOf(name)
+    local from = Macros.GroupStore(not toChar)
+    local group = from.of[name]
+    local text = (body or ""):gsub("\n$", "")
+    local newIndex, why = Macros.Create(name, text, toChar, SavedIcon(index, icon))
+    if not newIndex then return nil, why end
+    -- the two lists have their own slots: neither index moved
+    DeleteMacro(index)
+    from.of[name] = nil
+    Macros.SetGroup(name, toChar, group)
+    for _, slot in ipairs(slots) do
+        PickupMacro(newIndex)
+        PlaceAction(slot)
+        ClearCursor()
+    end
+    return newIndex, #slots
 end
 

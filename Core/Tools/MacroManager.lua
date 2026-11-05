@@ -26,13 +26,7 @@ local state = { tab = "general", sel = nil, isNew = false, dirty = false, icon =
 
 -- groups of the current tab: { names, collapsed, of = { [macro name] = group } }
 local Groups = ns.Transfer.Groups
-local function MG()
-    local owner = (state.tab == "general") and ns.Acct() or ns.Char()
-    owner.macroGroups = owner.macroGroups or {}
-    local g = owner.macroGroups
-    g.names, g.collapsed, g.of = g.names or {}, g.collapsed or {}, g.of or {}
-    return g
-end
+local function MG() return Macros.GroupStore(state.tab ~= "general") end
 local function GroupOf(m) return MG().of[m.name] end
 local function GroupMembers(name)
     local out = {}
@@ -111,7 +105,7 @@ list.thumb:SetWidth(2)
 ns.Color(list.thumb, T.accent, 0.6)
 
 local rows = {}
-local Select, RenderList, RevealSelection
+local Select, RenderList, RevealSelection, MoveMacro
 
 for i = 1, ROWS do
     local r = CreateFrame("Button", nil, list)
@@ -167,7 +161,16 @@ for i = 1, ROWS do
             RenderList()
             return
         end
-        if self.macro and button ~= "RightButton" then
+        if self.macro and button == "RightButton" then
+            local name = self.macro.name
+            UI.OpenMenu(self, {
+                { label = name, isTitle = true },
+                { label = state.tab == "general" and L["Move to Character"] or L["Move to General"],
+                  fn = function() MoveMacro(name) end },
+            }, { width = 180, point = "TOPLEFT", relPoint = "BOTTOMLEFT" })
+            return
+        end
+        if self.macro then
             state.selGroup = nil   -- a macro picked: export starts from it, not the group
             Select(self.macro.index)
         end
@@ -183,6 +186,8 @@ for i = 1, ROWS do
             GameTooltip:AddLine(L["From a template of the same name: Refresh on the templates page writes it anew."], T.accent[1], T.accent[2], T.accent[3], true)
         end
         GameTooltip:AddLine(L["Drag onto an action bar"], T.muted[1], T.muted[2], T.muted[3])
+        GameTooltip:AddLine(state.tab == "general" and L["Right-click: move to Character"] or L["Right-click: move to General"],
+            T.muted[1], T.muted[2], T.muted[3])
         GameTooltip:Show()
     end)
     r:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -509,6 +514,42 @@ Delete = function()
     if nextMacro then Select(nextMacro.index) else ClearEditor() end
     UpdateTabs()
     Status(L["Deleted \"%s\"."]:format(name or "?"))
+end
+
+-- the macro of the open tab with this name (the two lists may share a name)
+local function IndexInTab(name)
+    for _, m in ipairs(data) do if m.name == name then return m.index end end
+end
+
+-- to the other list; the tab stays open, so several can follow in a row
+MoveMacro = function(name)
+    if ns.InCombat() then Status(IN_COMBAT, true) return end
+    local index = IndexInTab(name)
+    if not index then return end
+    local wasSelected = index == state.sel
+    if wasSelected and state.dirty then
+        Status(L["Save your changes first."], true)
+        return
+    end
+    local selName = state.sel and not wasSelected and GetMacroInfo(state.sel)
+    local pos = 1
+    for p, m in ipairs(data) do if m.index == index then pos = p break end end
+    local toChar = state.tab == "general"
+    local newIndex, buttons = Macros.Move(index, toChar)
+    if not newIndex then Status(buttons, true) return end   -- then it holds the reason
+    LoadMacros()
+    UpdateTabs()
+    if wasSelected then
+        local nextMacro = data[math.min(pos, #data)]
+        if nextMacro then Select(nextMacro.index) else ClearEditor() end
+    else
+        -- the selection keeps its macro; unsaved edits stay in the editor
+        if selName then state.sel = IndexInTab(selName) end
+        RenderList()
+    end
+    local where = toChar and L["Character"] or L["General"]
+    Status(buttons > 0 and L["Moved \"%s\" to %s; it stays on %d action buttons."]:format(name, where, buttons)
+        or L["Moved \"%s\" to %s."]:format(name, where))
 end
 
 PickUp = function()

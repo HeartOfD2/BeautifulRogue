@@ -494,6 +494,13 @@ L["That is no template code (it starts with EF2:)."] = "Das ist kein Vorlagen-Co
 -- macros: groups, export / import
 L["%d macros in the code. Untick what you don't want."] = "%d Makros im Code. Hake ab, was du nicht willst."
 L["A macro named \"%s\" exists already."] = "Ein Makro „%s“ gibt es schon."
+L["Move to Character"] = "Zu Charakter verschieben"
+L["Move to General"] = "Zu Allgemein verschieben"
+L["Right-click: move to Character"] = "Rechtsklick: zu Charakter verschieben"
+L["Right-click: move to General"] = "Rechtsklick: zu Allgemein verschieben"
+L["Save your changes first."] = "Speichere zuerst deine Änderungen."
+L["Moved \"%s\" to %s."] = "„%s“ nach %s verschoben."
+L["Moved \"%s\" to %s; it stays on %d action buttons."] = "„%s“ nach %s verschoben; es bleibt auf %d Aktionstasten."
 L["Export macros"] = "Makros exportieren"
 L["Import macros"] = "Makros importieren"
 L["Import: %d added, %d overwritten, %d skipped, %d failed."] = "Import: %d hinzugefügt, %d überschrieben, %d übersprungen, %d fehlgeschlagen."

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (2026-11-05)
+
+- **Rogue macros: you choose where they go.** "Create missing" and creating a single macro now ask whether they become general or character macros; before, they always became general ones. `/ef defaults char` does the same from the chat.
+- **Rogue macros get their own group.** New macros land in the group "Rogue" of the macro manager, which is created if it isn't there yet. Macros you already have join it once, unless you sorted them into a group of your own.
+- **Macro manager: move a macro to the other list.** Right-click a macro for "Move to Character" or "Move to General". It keeps its text, icon and group and stays on your action bars.
+
 ## 1.1.0 (2026-11-05)
 
 - **The icon list matches this game again.** The macro icon picker's data had been built from a Retail client: it offered about 2,500 icons World of Warcraft: Forever does not have (they showed as empty tiles) and was missing the ones Forever brought. It is now built from the Forever client, 30,550 icons.

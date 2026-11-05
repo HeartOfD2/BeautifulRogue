@@ -6,7 +6,8 @@
 -- else the weapon with "prefer main hand" (none ticked: W1).
 -- Macros can't hold variables, so the names are written into the macros --
 -- this file keeps them up to date.
---   Create missing   makes the macros that don't exist yet (General macros)
+--   Create missing   makes the macros that don't exist yet, as general or
+--                    character macros, in the group "Rogue" of the macro manager
 --   Refresh          rewrites every macro of the list by its name
 -- Without Dual Wield (before level 10) the swap macros only change the main
 -- hand. Spell and weapon names come from the client, so the macro names
@@ -205,10 +206,11 @@ local function Update(only, quiet)
 end
 Rogue.UpdateWeaponMacros = function() Update() end
 
--- only = { [name] = true } limits it to those macros
-local function CreateMissing(only)
+-- only = { [name] = true } limits it to those macros; perChar: character
+-- macros instead of general ones
+local function CreateMissing(only, perChar)
     if ns.InCombat() then
-        Placeholders.AfterCombat("rogueCreate", function() CreateMissing(only) end)
+        Placeholders.AfterCombat("rogueCreate", function() CreateMissing(only, perChar) end)
         Report(L["In combat: the macros are created when combat ends."], false, {})
         return
     end
@@ -216,8 +218,8 @@ local function CreateMissing(only)
     for _, m in ipairs((Plan())) do
         if m.state == "missing" and (not only or only[m.name]) then
             -- without the gear for it yet the macro starts empty; Update fills it later
-            local body = m.body or "#showtooltip"
-            if (GetNumMacros() or 0) < Macros.CharBase() and pcall(CreateMacro, m.name, m.icon, body, false) then
+            if Macros.Create(m.name, m.body or "#showtooltip", perChar) then
+                Macros.SetGroup(m.name, perChar, L["Rogue"])
                 created[#created + 1] = m.name
                 if not m.body then empty[#empty + 1] = m.name .. " (" .. m.skip .. ")" end
             else
@@ -229,12 +231,38 @@ local function CreateMissing(only)
     end
     AfterWrites()
     local lines = {}
-    if #created > 0 then lines[#lines + 1] = L["created: %s"]:format(table.concat(created, ", ")) end
+    if #created > 0 then
+        lines[#lines + 1] = L["created under %s: %s"]:format(perChar and L["Character"] or L["General"], table.concat(created, ", "))
+    end
     if #empty > 0 then lines[#lines + 1] = L["still empty: %s"]:format(table.concat(empty, ", ")) end
     if #failed > 0 then lines[#lines + 1] = ns.Colorize(HEX.alert, L["failed (macro list full?): %s"]:format(table.concat(failed, ", "))) end
     Report(L["Weapon macros: %d created, %d already there."]:format(#created, existed), #failed > 0, lines)
 end
 Rogue.CreateWeaponMacros = CreateMissing
+
+-- general or character: the choice comes with each creation
+local function AskCreate(anchor, only)
+    UI.OpenMenu(anchor, {
+        { label = L["Create as macro"], isTitle = true },
+        { label = L["General"], fn = function() CreateMissing(only, false) end },
+        { label = L["Character"], fn = function() CreateMissing(only, true) end },
+    }, { width = 180, point = "TOPLEFT", relPoint = "BOTTOMLEFT" })
+end
+
+-- macros made before the group existed join it, once per character; the ones
+-- the player sorted into a group of their own stay there
+local function AdoptExisting()
+    local s = Rogue:Settings()
+    if s.macroGroupDone or not Rogue:IsActive() then return end
+    s.macroGroupDone = true
+    for _, m in ipairs((Plan())) do
+        for _, idx in ipairs(m.indices) do
+            local perChar = idx > Macros.CharBase()
+            if not Macros.GroupStore(perChar).of[m.name] then Macros.SetGroup(m.name, perChar, L["Rogue"]) end
+        end
+    end
+end
+Macros.OnShow(AdoptExisting)
 
 -- ---------------------------------------------------------------------------
 -- Page: Macros › Rogue
@@ -336,15 +364,16 @@ local function BuildPage(p)
         applyBtn.text:SetText(changes > 0 and L["Refresh all (%d)"]:format(changes) or L["Refresh all"])
         -- the selected macro: create or refresh just this one
         local st = sel and sel.state
-        selBtn.text:SetText(st == "missing" and L["Create \"%s\""]:format(sel.name)
+        selBtn.text:SetText(st == "missing" and (L["Create \"%s\""]:format(sel.name) .. "  ›")
             or L["Refresh \"%s\""]:format(sel and sel.name or "—"))
         selBtn:SetAlpha((st == "missing" or st == "change") and 1 or 0.4)
-        createBtn.text:SetText(L["Create %d missing"]:format(missing))
+        createBtn.text:SetText(L["Create %d missing"]:format(missing) .. "  ›")
         createBtn:SetAlpha(missing > 0 and 1 or 0.4)
     end
 
     RefreshPage = function()
         if not p:IsVisible() then return end
+        AdoptExisting()
         local selName = sel and sel.name
         plan = Plan()
         sel = nil
@@ -389,15 +418,20 @@ local function BuildPage(p)
         Render()
     end)
 
-    selBtn = UI.Button(p, LIST_W, "", function()
+    selBtn = UI.Button(p, LIST_W, "", function(self)
         if not sel then return end
-        if sel.state == "missing" then CreateMissing({ [sel.name] = true })
+        if sel.state == "missing" then AskCreate(self, { [sel.name] = true })
         elseif sel.state == "change" then Update({ [sel.name] = true }) end
     end, 22)
     selBtn:SetPoint("TOPLEFT", list, "BOTTOMLEFT", 0, -10)
     UI.Tooltip(selBtn, { L["Selected macro"], L["Creates the selected macro, or writes it anew when it is out of date."] })
-    createBtn = UI.Button(p, LIST_W, "", function() CreateMissing() end, 22)
+    createBtn = UI.Button(p, LIST_W, "", function(self)
+        for _, m in ipairs(plan) do
+            if m.state == "missing" then AskCreate(self) return end
+        end
+    end, 22)
     createBtn:SetPoint("TOPLEFT", selBtn, "BOTTOMLEFT", 0, -6)
+    UI.Tooltip(createBtn, { L["Create as macro"], L["Asks whether they become general or character macros. They go into the group \"%s\" of the macro manager, which is created if needed."]:format(L["Rogue"]) })
     applyBtn = UI.Button(p, 170, "", function() Update() end, 22)
     applyBtn:SetPoint("TOPLEFT", newBox, "BOTTOMLEFT", 0, -10)
     applyBtn:SetAccent(true)
@@ -463,4 +497,5 @@ ns.RegisterEvent("UPDATE_MACROS", function() if App:IsOpen("weaponMacros") and R
 ns.RegisterEvent("BAG_UPDATE", function() if App:IsOpen("weaponMacros") and RefreshPage then RefreshPage() end end)
 ns.RegisterEvent("PLAYER_EQUIPMENT_CHANGED", function() if App:IsOpen("weaponMacros") and RefreshPage then RefreshPage() end end)
 
-Rogue:Command({ "defaults" }, function() CreateMissing() end, L["rogue: create the missing weapon macros"])
+Rogue:Command({ "defaults" }, function(arg) CreateMissing(nil, arg == "char") end,
+    L["rogue: create the missing weapon macros (\"char\": as character macros)"])
