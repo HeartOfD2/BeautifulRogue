@@ -185,7 +185,7 @@ L["Click again"] = "Erneut klicken"
 -- macro manager
 L["Character"] = "Charakter"
 L["No macros here yet"] = "Hier gibt es noch keine Makros"
-L["Drag onto an action bar"] = "Auf eine Aktionsleiste ziehen"
+L["Drag onto a group or an action bar"] = "Auf eine Gruppe oder Aktionsleiste ziehen"
 L["Choose icon"] = "Symbol wählen"
 L["The question mark follows #showtooltip."] = "Das Fragezeichen übernimmt das Symbol von #showtooltip."
 L["NAME"] = "NAME"
@@ -494,6 +494,7 @@ L["That is no template code (it starts with EF2:)."] = "Das ist kein Vorlagen-Co
 -- macros: groups, export / import
 L["%d macros in the code. Untick what you don't want."] = "%d Makros im Code. Hake ab, was du nicht willst."
 L["A macro named \"%s\" exists already."] = "Ein Makro „%s“ gibt es schon."
+L["\"%s\" is now in the group \"%s\"."] = "„%s“ liegt jetzt in der Gruppe „%s“."
 L["Move to Character"] = "Zu Charakter verschieben"
 L["Move to General"] = "Zu Allgemein verschieben"
 L["Right-click: move to Character"] = "Rechtsklick: zu Charakter verschieben"

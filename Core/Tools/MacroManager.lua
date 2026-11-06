@@ -1,7 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- Macro Manager: the page. Browse, edit, create and delete your WoW macros in
 -- the addon's style: general and character macros, sorted into groups of your
--- own (general: account-wide, character: per character), drag-to-action-bar.
+-- own (general: account-wide, character: per character), drag onto a group
+-- header or an action bar.
 -- Parts: MacroIcons (icon picker), MacroTransfer (export / import),
 -- MacroActions (header buttons); they use the interface near the end of this
 -- file. The model (limits, helpers, registries) is Macros.lua.
@@ -105,7 +106,8 @@ list.thumb:SetWidth(2)
 ns.Color(list.thumb, T.accent, 0.6)
 
 local rows = {}
-local Select, RenderList, RevealSelection, MoveMacro
+local Select, RenderList, RevealSelection, MoveMacro, DropOnGroup
+local draggedIndex   -- the macro dragged out of the list, for a group header to take
 
 for i = 1, ROWS do
     local r = CreateFrame("Button", nil, list)
@@ -143,6 +145,8 @@ for i = 1, ROWS do
     r:SetScript("OnClick", function(self, button)
         local h = self.header
         if h then
+            -- a macro still on the cursor lands here instead of folding the group
+            if button == "LeftButton" and DropOnGroup(h.group) then return end
             if button == "RightButton" then
                 Groups.Menu(MG(), h, self, {
                     members = GroupMembers,
@@ -175,7 +179,13 @@ for i = 1, ROWS do
             Select(self.macro.index)
         end
     end)
-    r:SetScript("OnDragStart", function(self) if self.macro then PickupMacro(self.macro.index) end end)
+    r:SetScript("OnDragStart", function(self)
+        if self.macro then
+            draggedIndex = self.macro.index
+            PickupMacro(draggedIndex)
+        end
+    end)
+    r:SetScript("OnReceiveDrag", function(self) if self.header then DropOnGroup(self.header.group) end end)
     r:SetScript("OnEnter", function(self)
         local m = self.macro
         if not m then return end
@@ -185,7 +195,7 @@ for i = 1, ROWS do
         if ns.Templates and ns.Templates.Find(m.name) then
             GameTooltip:AddLine(L["From a template of the same name: Refresh on the templates page writes it anew."], T.accent[1], T.accent[2], T.accent[3], true)
         end
-        GameTooltip:AddLine(L["Drag onto an action bar"], T.muted[1], T.muted[2], T.muted[3])
+        GameTooltip:AddLine(L["Drag onto a group or an action bar"], T.muted[1], T.muted[2], T.muted[3])
         GameTooltip:AddLine(state.tab == "general" and L["Right-click: move to Character"] or L["Right-click: move to General"],
             T.muted[1], T.muted[2], T.muted[3])
         GameTooltip:Show()
@@ -383,6 +393,28 @@ RevealSelection = function()
             return
         end
     end
+end
+
+-- Takes the macro dragged out of this list into a group. Only that one: a macro
+-- picked up from an action bar would be lost from the bar, and the other list has
+-- groups of its own. The macro itself doesn't change, so unsaved edits stay.
+DropOnGroup = function(group)
+    local kind, index = GetCursorInfo()
+    if kind ~= "macro" or index ~= draggedIndex then return false end
+    local macro
+    for _, m in ipairs(data) do if m.index == index then macro = m break end end
+    if not macro then return false end
+    draggedIndex = nil
+    ClearCursor()
+    MG().of[macro.name] = Groups.Stored(group)
+    if index == state.sel then
+        state.groupValue = MG().of[macro.name]
+        groupDD:Refresh()
+        RevealSelection()
+    end
+    RenderList()
+    Status(L["\"%s\" is now in the group \"%s\"."]:format(macro.name, group))
+    return true
 end
 
 Select = function(index)

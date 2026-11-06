@@ -16,7 +16,7 @@ Works for every class and in every client language: spell and item names are alw
 - **Swing timer:** up to three thin bars (main hand, off hand, ranged) that fill between two swings or shots.
 - **Layout editor:** order (drag a row by its handle), visibility, height, colors, text, combo point shape and effect of every part; hide out of combat, *hold to show* with ALT, CTRL or SHIFT; background with color and opacity.
 - **Sound picker:** wherever BeautifulRogue plays a sound you pick from every sound of the game, with search, a preview and a volume.
-- **Macro manager:** general and character macros in groups, icon search with a category filter, spell search, a macro assistant, export and import; a right-click moves a macro to the other list and it stays on your action bars.
+- **Macro manager:** general and character macros in groups, icon search with a category filter, spell search, a macro assistant, export and import; drag a macro onto a group to sort it in, a right-click moves it to the other list and it stays on your action bars.
 - **Templates with placeholders:** `{s:1752}` becomes the spell in your language, `{w:W1}` / `{w:W2}` your weapons, `{g:t1}` / `{g:t2}` your trinkets, `{c:name}` a value of your own. *Refresh* rewrites every macro named like a template; when your gear changes, the macros follow.
 - **Notes module** (on for every class, switch it off on the Modules page): a notebook with colored groups, notes per player with a popup when you target them, sticky notes on the screen with checkboxes and lists.
 - **Rogue module:** poison tiles with time and charges, Slice and Dice timer, weapon swap macros, Backstab and Ambush with the dagger in front, Kick, Blind, Gouge and poison macros.

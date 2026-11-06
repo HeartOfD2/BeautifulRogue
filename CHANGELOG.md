@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.0 (2026-11-06)
+
+- **Macro manager: drag a macro onto a group.** Drop it on a group header to sort it in; the group list box in the editor keeps working. Dragging onto an action bar stays as it was.
+
 ## 1.2.0 (2026-11-05)
 
 - **Rogue macros: you choose where they go.** "Create missing" and creating a single macro now ask whether they become general or character macros; before, they always became general ones. `/ef defaults char` does the same from the chat.
