@@ -20,7 +20,7 @@ Works for every class and in every client language: spell and item names are alw
 - **Templates with placeholders:** `{s:1752}` becomes the spell in your language, `{w:W1}` / `{w:W2}` your weapons, `{g:t1}` / `{g:t2}` your trinkets, `{c:name}` a value of your own. *Refresh* rewrites every macro named like a template; when your gear changes, the macros follow.
 - **Notes module** (on for every class, switch it off on the Modules page): a notebook with colored groups, notes per player with a popup when you target them, sticky notes on the screen with checkboxes and lists.
 - **Rogue module:** poison tiles with time and charges, Slice and Dice timer, weapon swap macros, Backstab and Ambush with the dagger in front, Kick, Blind, Gouge and poison macros.
-- **Extras (each with its own switch; the cursor ring starts off):** a **cursor ring** around the mouse pointer, **damage numbers** with your own font, size and duration, **fast camera zoom**, a button that **hides the chat**, and **copy chat** to select and copy chat text.
+- **Extras (each with its own switch; the cursor ring starts off):** a **cursor ring** around the mouse pointer, **damage numbers** with your own font, size and duration, **fast camera zoom**, a button that **hides the chat**, **copy chat** to select and copy chat text, and **sparkling skinnable corpses** for characters with Skinning.
 - **Look:** dark and light mode, teal, amber or blue accent, Fira Sans as the default font (Barlow, Inter, Source Code Pro and more to pick).
 
 <p align="center">

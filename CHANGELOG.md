@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0 (2026-11-06)
+
+- **Skinnable corpses sparkle.** New tab Skinning under Extras › Miscellaneous: the looted corpse your interact key would skin next sparkles, golden when you can skin it, dim from afar and grey when your skill is too low. The skinning symbol sits above the glints and the corpse's nameplate stays hidden meanwhile. On by default, only for characters with Skinning and not during combat. Needs the game's Enable Interact Key setting.
+
 ## 1.3.0 (2026-11-06)
 
 - **Macro manager: drag a macro onto a group.** Drop it on a group header to sort it in; the group list box in the editor keeps working. Dragging onto an action bar stays as it was.
