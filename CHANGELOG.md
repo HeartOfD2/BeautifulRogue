@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.2 (2026-11-08)
+
+- **Fix: right-clicking a poison button no longer applies the poison.** It only opens the poison choice, as intended; left-click applies.
+
 ## 1.4.1 (2026-11-08)
 
 - **"New gear" can ask or act on its own.** Under Macros › Placeholders, "On new gear" is **Ask** (the window, as before), **Automatically** (W1 and W2 are picked for you, gear macros follow) or **Manually** (nothing happens until you pick W1/W2 and press Refresh; choosing it asks first, and the chat names macros that no longer fit your gear). "Don't ask again" in the window switches to Automatically; pick Ask there to get the question back.

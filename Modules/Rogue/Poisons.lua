@@ -211,13 +211,13 @@ function el:UpdateButtons()
         if id then
             local macro = ("/use item:%d\n/use %d"):format(id, slot)
             -- modified clicks don't fall back to the plain attributes on this
-            -- client, so every variant is set explicitly
+            -- client, so every variant is set explicitly. Only button 1: an
+            -- unsuffixed "type" would also answer the right-click, which then
+            -- applied the poison while the choice opened.
             for _, prefix in ipairs({ "", "*", "alt-", "ctrl-", "shift-" }) do
                 b:SetAttribute(prefix .. "type1", "macro")
                 b:SetAttribute(prefix .. "macrotext1", macro)
             end
-            b:SetAttribute("type", "macro")
-            b:SetAttribute("macrotext", macro)
             b.icon:SetTexture(ns.ItemIcon(id) or Rogue.POISON_ICON)
             b.icon:SetDesaturated(false)
             b.icon:SetAlpha(1)
@@ -225,7 +225,6 @@ function el:UpdateButtons()
             for _, prefix in ipairs({ "", "*", "alt-", "ctrl-", "shift-" }) do
                 b:SetAttribute(prefix .. "type1", nil)
             end
-            b:SetAttribute("type", nil)
             b.icon:SetTexture(Rogue:PoisonIcon(key))
             b.icon:SetDesaturated(true)
             b.icon:SetAlpha(0.45)
