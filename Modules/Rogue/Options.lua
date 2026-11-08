@@ -15,12 +15,20 @@ function Rogue:BuildOptions(box, width)
         if tip then UI.Tooltip(r, { label, tip }) end
         rows[#rows + 1] = r
     end
+    local STONES_W = 150
+    width = width - STONES_W - 10
     Row(L["Warn when a poison runs low (5 minutes or 5 charges)"], "poisonWarn", 0)
+    local stones = UI.Button(box, STONES_W, L["Sharpening stones"] .. "  ›", function()
+        if Rogue:IsActive() then Rogue:OpenStones() end
+    end, 20)
+    stones:SetPoint("TOPLEFT", width + 10, 0)
+    UI.Tooltip(stones, { L["Sharpening stones"], L["Stone button in the poison tiles, warning, ranking and own items."] })
     function Rogue:RefreshOptions()
         for _, r in ipairs(rows) do
             r:Refresh()
             r:SetDisabled(not Rogue:IsActive())   -- the module is switched off
         end
+        stones:SetAlpha(Rogue:IsActive() and 1 or 0.4)
     end
     return 22
 end

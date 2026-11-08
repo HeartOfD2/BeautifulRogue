@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 (2026-11-08)
+
+- **Sharpening stones next to your poisons.** On this server a weapon holds a poison and a stone at once, so each poison tile now has a small stone button on its right: left-click applies a stone, right-click picks one for that hand. Its tooltip shows the time left; the outline turns red under 5 minutes and blinks when the stone is missing in combat (only while you carry a fitting one).
+- **Your own stone ranking.** "Sharpening stones ›" on the Rogue box under Addon › Modules (or "Edit ranking…" in the stone choice) opens a window with all stones: drag to reorder; the button takes the first one in your bags that fits the weapon (sharpening stones for blades, weightstones for maces and fist weapons) and your level. Add your own items by ID or link, such as oils or new stones. The stone button can be switched off there; while it is off, right-click a poison button for "Sharpening stones…", or type `/brogue stones`.
+- **Poison tiles read poison and stone apart.** A stone alone no longer shows up as a poison.
+
 ## 1.4.2 (2026-11-08)
 
 - **Fix: right-clicking a poison button no longer applies the poison.** It only opens the poison choice, as intended; left-click applies.

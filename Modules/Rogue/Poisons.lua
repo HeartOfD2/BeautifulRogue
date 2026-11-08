@@ -1,18 +1,24 @@
 -- ---------------------------------------------------------------------------
 -- Poison tracker: one tile per hand with time left and charges. The button in
 -- each tile applies the poison (left-click) or opens the poison choice
--- (right-click). Time and charges come from GetWeaponEnchantInfo; the weapon
+-- (right-click). A second, smaller button on the right of the tile does the
+-- same for sharpening stones (Stones.lua): this client keeps a poison (imbue)
+-- and a stone (temporary enchant) on a weapon at once. Time and charges come
+-- from the weapon enchant list, else from GetWeaponEnchantInfo; the weapon
 -- tooltip only tells which poison it is (matched by the localized item names).
--- A tile turns red and blinks when a poison runs low or is missing in combat.
+-- A tile turns red and blinks when a poison runs low or is missing in combat;
+-- the stone button's outline does the same for its stone.
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 local L, T, HEX = ns.L, ns.T, ns.HEX
 local HUD, UI, Rogue = ns.HUD, ns.UI, ns.Rogue
 
 local TILE_H = 22
+local BTN = TILE_H - 6
 local LOW_MINUTES, LOW_CHARGES = 5, 5
 local HAND_LABEL = { MH = L["MH"], OH = L["OH"] }
 local HAND_NAME = { MH = L["Main hand"], OH = L["Off hand"] }
+local PREFIXES = { "", "*", "alt-", "ctrl-", "shift-" }
 
 -- ---------------------------------------------------------------------------
 -- Reading the weapons
@@ -70,21 +76,57 @@ end
 -- tooltip scan as long as the same enchant sits on the weapon
 local keyByEnchant = {}
 
--- per hand: { active, mins, charges, key } or nil when no weapon
-local function ReadHands()
-    local out = {}
-    local enchant
-    if GetWeaponEnchantInfo then
-        local ok, hasMH, mhExp, mhCh, mhID, hasOH, ohExp, ohCh, ohID = pcall(GetWeaponEnchantInfo)
-        if ok and not (ns.IsSecret(hasMH) or ns.IsSecret(mhExp) or ns.IsSecret(hasOH) or ns.IsSecret(ohExp)
-                or ns.IsSecret(mhCh) or ns.IsSecret(ohCh) or ns.IsSecret(mhID) or ns.IsSecret(ohID)) then
-            enchant = { MH = { hasMH, mhExp, mhCh, mhID }, OH = { hasOH, ohExp, ohCh, ohID } }
+-- the old single-enchant API, all hands at once: { MH = {has, ms, charges, id}, OH = ... } or nil
+local function ReadLegacy()
+    if not GetWeaponEnchantInfo then return nil end   -- lint:ignore (fallback without the enchant list)
+    local ok, hasMH, mhExp, mhCh, mhID, hasOH, ohExp, ohCh, ohID = pcall(GetWeaponEnchantInfo)   -- lint:ignore (same fallback)
+    if ok and not (ns.IsSecret(hasMH) or ns.IsSecret(mhExp) or ns.IsSecret(hasOH) or ns.IsSecret(ohExp)
+            or ns.IsSecret(mhCh) or ns.IsSecret(ohCh) or ns.IsSecret(mhID) or ns.IsSecret(ohID)) then
+        return { MH = { hasMH, mhExp, mhCh, mhID }, OH = { hasOH, ohExp, ohCh, ohID } }
+    end
+end
+
+-- the stone from the weapon tooltip, for hands the enchant list can't read: a
+-- line with a time in brackets that names no poison. No readable line at all
+-- (secret in combat) keeps what was read last.
+local function StoneFromTooltip(hand, slot)
+    local lines = TooltipLines(slot)
+    if #lines == 0 then return end
+    for _, text in ipairs(lines) do
+        if not IdentifyPoison({ text }) then
+            local mins = ParseLine(text)
+            if mins then
+                Rogue:SetStoneRead(hand, { ms = mins * 60000 })
+                return
+            end
         end
     end
-    Rogue.readMode = enchant and L["weapon enchant info"] or L["tooltip text"]
+    Rogue:SetStoneRead(hand, nil)
+end
+
+-- per hand: { active, mins, charges, key } or nil when no weapon. The enchant
+-- list keeps poison (imbue) and stone (temporary) apart; the old API reports
+-- one enchant per weapon and is only asked for hands the list can't read.
+local function ReadHands()
+    local out, enchant = {}, {}
+    local listed, legacy = 0, nil
+    for hand in pairs(Rogue.HANDS) do
+        local ok, imbue, temp = Rogue:ReadEnchantList(hand)
+        if ok then
+            enchant[hand] = { imbue ~= nil, imbue and imbue.ms, imbue and imbue.charges, imbue and imbue.id }
+            Rogue:SetStoneRead(hand, temp)
+            listed = listed + 1
+        else
+            legacy = legacy or ReadLegacy() or false
+            enchant[hand] = legacy and legacy[hand] or nil
+            if GetInventoryItemID("player", Rogue.HANDS[hand]) then StoneFromTooltip(hand, Rogue.HANDS[hand]) end
+        end
+    end
+    Rogue.readMode = listed == 2 and L["weapon enchant list"]
+        or (enchant.MH or enchant.OH) and L["weapon enchant info"] or L["tooltip text"]
     for hand, slot in pairs(Rogue.HANDS) do
         if GetInventoryItemID("player", slot) then
-            local e = enchant and enchant[hand]
+            local e = enchant[hand]
             local id = e and e[1] and e[4]
             local key, line = id and keyByEnchant[id], nil
             -- an empty weapon needs no tooltip scan
@@ -135,11 +177,12 @@ local function MakeTile(hand)
     return c
 end
 
-local OpenChoice
+local OpenChoice, OpenStoneChoice
 
-local function MakeButton(hand, tile)
-    local b = CreateFrame("Button", "BeautifulRoguePoison" .. hand, HUD.frame, "SecureActionButtonTemplate")
-    b:SetSize(TILE_H - 6, TILE_H - 6)
+-- a secure button over a tile: left-click runs its macro, right-click calls onRight
+local function MakeSecure(name, tile, icon, onRight, onEnter)
+    local b = CreateFrame("Button", name, HUD.frame, "SecureActionButtonTemplate")
+    b:SetSize(BTN, BTN)
     b:SetFrameLevel(tile:GetFrameLevel() + 2)
     b:RegisterForClicks("AnyDown")   -- this client only runs secure actions on press
     ns.Skin(b, T.hudTrack, T.hudLine)
@@ -147,18 +190,42 @@ local function MakeButton(hand, tile)
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()
     b.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    b.icon:SetTexture(Rogue.POISON_ICON)
+    b.icon:SetTexture(icon)
     b.hl = b:CreateTexture(nil, "HIGHLIGHT")
     b.hl:SetAllPoints()
     b.hl:SetColorTexture(1, 1, 1, 0.2)
     -- PostClick is the secure-safe hook for the right-click choice
     b:SetScript("PostClick", function(self, button, down)
-        if button == "RightButton" and down ~= false then OpenChoice(self, hand) end
+        if button == "RightButton" and down ~= false then onRight(self) end
     end)
-    b:SetScript("OnEnter", function(self) el:ShowTooltip(self, hand) end)
+    b:SetScript("OnEnter", onEnter)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
     b:Hide()
     return b
+end
+
+-- the apply macro (secure attributes: out of combat only). Modified clicks
+-- don't fall back to the plain attributes on this client, so every variant is
+-- set explicitly. Only button 1: an unsuffixed "type" would also answer the
+-- right-click, which then applied the item while the choice opened.
+local function SetApply(b, itemID, slot)
+    local macro = itemID and ("/use item:%d\n/use %d"):format(itemID, slot) or nil
+    for _, prefix in ipairs(PREFIXES) do
+        b:SetAttribute(prefix .. "type1", macro and "macro" or nil)
+        b:SetAttribute(prefix .. "macrotext1", macro)
+    end
+end
+
+local function MakeButton(hand, tile)
+    return MakeSecure("BeautifulRoguePoison" .. hand, tile, Rogue.POISON_ICON,
+        function(self) OpenChoice(self, hand) end,
+        function(self) el:ShowTooltip(self, hand) end)
+end
+
+local function MakeStoneButton(hand, tile)
+    return MakeSecure("BeautifulRogueStone" .. hand, tile, Rogue.STONE_ICON,
+        function(self) OpenStoneChoice(self, hand) end,
+        function(self) el:ShowStoneTooltip(self, hand) end)
 end
 
 -- built on first use: secure buttons protect the HUD in combat, which only
@@ -167,28 +234,35 @@ function el:Ensure()
     if self.tiles or ns.InCombat() then return self.tiles ~= nil end
     self.tiles = { MH = MakeTile("MH"), OH = MakeTile("OH") }
     self.buttons = { MH = MakeButton("MH", self.tiles.MH), OH = MakeButton("OH", self.tiles.OH) }
+    self.stones = { MH = MakeStoneButton("MH", self.tiles.MH), OH = MakeStoneButton("OH", self.tiles.OH) }
     return true
 end
-el.hands, el.alert = {}, {}
+el.hands, el.alert, el.stoneAlert = {}, {}, {}
 el.elapsed, el.clock = 0, 0
 
 function el:Place(y)
     if not self:Ensure() then return 0 end
     local w = (HUD.WIDTH - HUD.GAP) / 2
-    self.tiles.MH:SetWidth(w)
-    self.tiles.OH:SetWidth(w)
-    self.tiles.MH:ClearAllPoints()
-    self.tiles.MH:SetPoint("TOPLEFT", HUD.frame, "TOPLEFT", 0, y)
-    self.tiles.OH:ClearAllPoints()
-    self.tiles.OH:SetPoint("TOPRIGHT", HUD.frame, "TOPRIGHT", 0, y)
-    -- the secure buttons hang from the HUD itself, not from the tiles
-    self.buttons.MH:ClearAllPoints()
-    self.buttons.MH:SetPoint("TOPLEFT", HUD.frame, "TOPLEFT", 3, y - 3)
-    self.buttons.OH:ClearAllPoints()
-    self.buttons.OH:SetPoint("TOPLEFT", HUD.frame, "TOPLEFT", w + HUD.GAP + 3, y - 3)
-    for _, hand in ipairs({ "MH", "OH" }) do
-        self.tiles[hand]:Show()
-        self.buttons[hand]:Show()
+    local stone = Rogue:StoneButtonOn()
+    self.stoneOn = stone
+    for i, hand in ipairs({ "MH", "OH" }) do
+        local x = (i - 1) * (w + HUD.GAP)
+        local tile = self.tiles[hand]
+        tile:SetWidth(w)
+        tile:ClearAllPoints()
+        tile:SetPoint("TOPLEFT", HUD.frame, "TOPLEFT", x, y)
+        tile.value:ClearAllPoints()
+        tile.value:SetPoint("RIGHT", stone and -(BTN + 9) or -6, 0)
+        tile.label:SetShown(true)
+        tile:Show()
+        -- the secure buttons hang from the HUD itself, not from the tiles
+        local b, s = self.buttons[hand], self.stones[hand]
+        b:ClearAllPoints()
+        b:SetPoint("TOPLEFT", HUD.frame, "TOPLEFT", x + 3, y - 3)
+        b:Show()
+        s:ClearAllPoints()
+        s:SetPoint("TOPLEFT", HUD.frame, "TOPLEFT", x + w - BTN - 3, y - 3)
+        s:SetShown(stone)
     end
     return TILE_H
 end
@@ -198,37 +272,65 @@ function el:HideAll()
     for _, hand in ipairs({ "MH", "OH" }) do
         self.tiles[hand]:Hide()
         self.buttons[hand]:Hide()
+        self.stones[hand]:Hide()
     end
 end
 
--- the apply macro of each button (secure attributes: out of combat only)
+-- the apply macros of the buttons (secure attributes: out of combat only)
 function el:UpdateButtons()
     if ns.InCombat() or not self.tiles then return end
     for hand, slot in pairs(Rogue.HANDS) do
         local b = self.buttons[hand]
         local key = Rogue:EffectiveKey(hand)
         local _, id = Rogue:FindPoison(key)
+        SetApply(b, id, slot)
         if id then
-            local macro = ("/use item:%d\n/use %d"):format(id, slot)
-            -- modified clicks don't fall back to the plain attributes on this
-            -- client, so every variant is set explicitly. Only button 1: an
-            -- unsuffixed "type" would also answer the right-click, which then
-            -- applied the poison while the choice opened.
-            for _, prefix in ipairs({ "", "*", "alt-", "ctrl-", "shift-" }) do
-                b:SetAttribute(prefix .. "type1", "macro")
-                b:SetAttribute(prefix .. "macrotext1", macro)
-            end
             b.icon:SetTexture(ns.ItemIcon(id) or Rogue.POISON_ICON)
             b.icon:SetDesaturated(false)
             b.icon:SetAlpha(1)
         else
-            for _, prefix in ipairs({ "", "*", "alt-", "ctrl-", "shift-" }) do
-                b:SetAttribute(prefix .. "type1", nil)
-            end
             b.icon:SetTexture(Rogue:PoisonIcon(key))
             b.icon:SetDesaturated(true)
             b.icon:SetAlpha(0.45)
         end
+        SetApply(self.stones[hand], (Rogue:StoneFor(hand)), slot)
+    end
+end
+
+-- the hand label (MH/OH) gives way when the stone button leaves too little room
+local function FitLabel(tile, stone)
+    if not stone then
+        tile.label:SetShown(true)
+        return
+    end
+    local room = (tile:GetWidth() or 0) - (TILE_H + 1) - (BTN + 9) - 4
+    tile.label:SetShown((tile.label:GetStringWidth() or 0) + 4 + (tile.value:GetStringWidth() or 0) <= room)
+end
+
+-- stone buttons: icon of the stone they apply, dimmed while none is on the
+-- weapon, grey without one in the bags; outline red when it runs low, blinking
+-- when it is missing in combat (both only with a fitting stone in the bags)
+function el:UpdateStones(inCombat)
+    local warn = Rogue:StoneWarnOn()
+    for _, hand in ipairs({ "MH", "OH" }) do
+        local s = self.stones[hand]
+        local alert = false
+        if self.stoneOn and GetInventoryItemID("player", Rogue.HANDS[hand]) then
+            local id = Rogue:StoneFor(hand)
+            local left = Rogue:StoneLeft(hand)
+            s.icon:SetTexture(id and ns.ItemIcon(id) or Rogue.STONE_ICON)
+            s.icon:SetDesaturated(id == nil)
+            s.icon:SetAlpha(left and 1 or (id and 0.6 or 0.4))
+            if warn and id then
+                if left and left <= LOW_MINUTES * 60 then
+                    alert = "low"
+                elseif not left and inCombat then
+                    alert = "missing"
+                end
+            end
+        end
+        self.stoneAlert[hand] = alert
+        if alert ~= "missing" then ns.SetEdgeColor(s, alert and T.hudAlert or nil) end
     end
 end
 
@@ -240,7 +342,11 @@ function el:Update()
             self.alert[hand] = false
             self.tiles[hand].value:SetText(ns.Colorize(HEX.hudMuted, "—"))
             ns.SetEdgeColor(self.tiles[hand])
+            FitLabel(self.tiles[hand], self.stoneOn)
         end
+        pcall(ReadHands)   -- stones work from level 1
+        self:UpdateStones(UnitAffectingCombat("player"))
+        self:UpdateButtons()
         return
     end
     local ok, hands = pcall(ReadHands)
@@ -262,9 +368,11 @@ function el:Update()
             text, alert = ns.Colorize(HEX.hudMuted, "—"), false
         end
         tile.value:SetText(text)
+        FitLabel(tile, self.stoneOn)
         self.alert[hand] = alert
         ns.SetEdgeColor(tile, alert and T.hudAlert or nil)
     end
+    self:UpdateStones(inCombat)
     self:UpdateButtons()
 end
 
@@ -286,6 +394,9 @@ function el:OnUpdate(elapsed)
             value:SetAlpha(breathe)
         else
             value:SetAlpha(1)
+        end
+        if self.stoneAlert[hand] == "missing" then
+            ns.SetEdgeColor(self.stones[hand], blinkOn and T.hudAlert or nil)
         end
     end
 end
@@ -318,6 +429,30 @@ function el:ShowTooltip(owner, hand)
     GameTooltip:Show()
 end
 
+function el:ShowStoneTooltip(owner, hand)
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    local slot = Rogue.HANDS[hand]
+    GameTooltip:AddLine(("%s: %s"):format(HAND_NAME[hand], ns.EquippedName(slot) or "—"), 1, 1, 1)
+    local id, missingPick = Rogue:StoneFor(hand)
+    if id then
+        GameTooltip:AddLine(L["Applies: %s"]:format(Rogue:StoneName(id)), 0.8, 0.8, 0.8)
+    elseif missingPick then
+        GameTooltip:AddLine(L["No %s in your bags."]:format(Rogue:StoneName(missingPick)), 1, 0.4, 0.4, true)
+    else
+        GameTooltip:AddLine(L["No fitting sharpening stone in your bags."], 1, 0.4, 0.4, true)
+    end
+    local left, known = Rogue:StoneLeft(hand)
+    if left then
+        GameTooltip:AddLine(L["Stone on the weapon: %d min"]:format(math.ceil(left / 60)), 0.45, 0.85, 0.55)
+    elseif known then
+        GameTooltip:AddLine(L["No stone on the weapon."], 0.6, 0.6, 0.6)
+    else
+        GameTooltip:AddLine(L["The stone on the weapon can't be read right now."], 0.6, 0.6, 0.6, true)
+    end
+    GameTooltip:AddLine(L["Left-click: apply  ·  Right-click: choose stone"], 0.6, 0.6, 0.6)
+    GameTooltip:Show()
+end
+
 -- ---------------------------------------------------------------------------
 -- Poison choice (right-click)
 -- ---------------------------------------------------------------------------
@@ -341,10 +476,54 @@ OpenChoice = function(anchor, hand)
         desc = L["highest rank"],
         fn = function() Rogue:SetChoice(hand, nil) end,
     }
+    -- with the stone button hidden this is the way back to its settings
+    if not Rogue:StoneButtonOn() then
+        items[#items + 1] = {
+            label = L["Sharpening stones…"], icon = Rogue.STONE_ICON, divider = true,
+            desc = L["stone button off"],
+            fn = function() Rogue:OpenStones() end,
+        }
+    end
+    UI.OpenMenu(anchor, items, { point = "TOPLEFT", relPoint = "BOTTOMRIGHT", x = 2, y = -4, width = 320 })
+end
+
+-- stone choice: the stones of the ranking that fit this weapon
+OpenStoneChoice = function(anchor, hand)
+    if ns.InCombat() then
+        ns.Print(L["Stones can't be chosen during combat."])
+        return
+    end
+    local current = Rogue:StonePick(hand)
+    local items = { { label = hand == "MH" and L["Main hand: choose stone"] or L["Off hand: choose stone"], isTitle = true } }
+    for _, id in ipairs(Rogue:StoneOrder()) do
+        if Rogue:StoneFits(id, hand) or id == current then
+            local n = ns.ItemCount(id)
+            items[#items + 1] = {
+                label = Rogue:StoneName(id), icon = ns.ItemIcon(id) or Rogue.STONE_ICON, checked = current == id,
+                desc = n > 0 and tostring(n) or L["none in bags"],
+                fn = function() Rogue:SetStonePick(hand, id) end,
+            }
+        end
+    end
+    items[#items + 1] = {
+        label = L["Best by ranking"], icon = Rogue.STONE_ICON, checked = current == nil, divider = true,
+        desc = L["first one in the bags"],
+        fn = function() Rogue:SetStonePick(hand, nil) end,
+    }
+    items[#items + 1] = {
+        label = L["Edit ranking…"], icon = Rogue.STONE_ICON,
+        fn = function() Rogue:OpenStones() end,
+    }
     UI.OpenMenu(anchor, items, { point = "TOPLEFT", relPoint = "BOTTOMRIGHT", x = 2, y = -4, width = 320 })
 end
 
 Rogue:On("ROGUE_POISON_CHOICE", function() el:UpdateButtons() end)
+Rogue:On("ROGUE_STONE_CHOICE", function() if el.shown then el:Update() end end)
+-- the stone button switched on or off: the tiles are laid out anew
+Rogue:On("ROGUE_STONE_BUTTON", function()
+    HUD:ApplyLayout()
+    if el.shown then el:Update() end
+end)
 for _, ev in ipairs({ "BAG_UPDATE", "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED" }) do
     Rogue:Event(ev, function() if el.shown then el:Update() end end)
 end
