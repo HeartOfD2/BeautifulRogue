@@ -54,11 +54,22 @@ end
 
 -- the weapon that goes into the main hand unless an ability needs a dagger
 -- there: "W1", "W2" or nil (none ticked: W1)
+-- (kept with W1 / W2 on the placeholders page; the rogue's old setting moves there once)
 function Rogue:PreferredRole()
-    local r = self:Settings().preferMH
-    return (r == "W1" or r == "W2") and r or nil
+    local s = self:Settings()
+    if s.preferMH ~= nil then
+        if Placeholders.PreferredRole() == nil then Placeholders.SetPreferredRole(s.preferMH) end
+        s.preferMH = nil
+    end
+    return Placeholders.PreferredRole()
 end
-function Rogue:SetPreferredRole(role) self:Settings().preferMH = role end
+function Rogue:SetPreferredRole(role) Placeholders.SetPreferredRole(role) end
+-- the "Prefer main hand" boxes on the placeholders page show while this module runs
+Placeholders.UsePreferredRole(function()
+    if not Rogue:IsActive() then return false end
+    Rogue:PreferredRole()   -- takes the old setting along before the page shows it
+    return true
+end)
 local function Other(role) return role == "W1" and "W2" or "W1" end
 
 -- front and back role for an ability: wantDagger = Backstab / Ambush
@@ -275,32 +286,20 @@ local STATE = {
 local function BuildPage(p)
     local W = App.CONTENT_W
     local LIST_W, ROWS, ROW = 250, 8, 28
-    local TOP = -66   -- below the two weapon rows
+    local TOP = -34   -- below the weapon line
     local plan, sel, scroll = {}, nil, 0
     local rows = {}
 
-    -- W1 / W2: the same choice as on the placeholders page
-    local roleRows = {}
-    for i, role in ipairs(Placeholders.ROLES) do
-        local r = Placeholders.RoleRow(p, role, Placeholders.Roles, function()
-            Placeholders.UpdateGearMacros()
-            RefreshPage()
-        end)
-        r:SetPoint("TOPLEFT", 0, -(i - 1) * 28)
-        roleRows[i] = r
-    end
-    -- "prefer main hand": at most one of the two (a second click clears it)
-    local fronts = {}
-    for i, role in ipairs(Placeholders.ROLES) do
-        local c = UI.CheckRow(p, L["Prefer main hand"], function() return Rogue:PreferredRole() == role end, function()
-            Rogue:SetPreferredRole(Rogue:PreferredRole() ~= role and role or nil)
-            for _, x in ipairs(fronts) do x:Refresh() end
-            if Rogue.UpdateWeaponMacros then Rogue.UpdateWeaponMacros() end
-        end, 170)
-        c:SetPoint("TOPLEFT", 446, -(i - 1) * 28 - 2)
-        UI.Tooltip(c, { L["Prefer main hand"], L["This weapon goes into the main hand for everything that doesn't need a dagger there (Sinister Strike, say), and leads when both are daggers. None ticked: W1."] })
-        fronts[i] = c
-    end
+    -- W1 / W2 and "prefer main hand" are set on the placeholders page; here
+    -- only what they are right now, with a way there
+    local weapons = ns.Text(p, 12)
+    weapons:SetPoint("TOPLEFT", 0, -4)
+    weapons:SetWidth(W - 150)
+    weapons:SetJustifyH("LEFT")
+    weapons:SetWordWrap(false)
+    local toRoles = UI.Button(p, 140, L["Placeholders"] .. "  ›", function() App:Select("placeholders") end, 22)
+    toRoles:SetPoint("TOPRIGHT", 0, 0)
+    UI.Tooltip(toRoles, { L["Placeholders"], L["Pick W1, W2 and \"Prefer main hand\" there."] })
     local dualHint = UI.Hint(p, "", W)
 
     local list = CreateFrame("Frame", nil, p)
@@ -382,8 +381,10 @@ local function BuildPage(p)
             for _, m in ipairs(plan) do if m.state == "change" then sel = m break end end
             sel = sel or plan[1]
         end
-        for _, r in ipairs(roleRows) do r:Refresh() end
-        for _, c in ipairs(fronts) do c:Refresh() end
+        local lead = Rogue:PreferredRole()
+        weapons:SetText(RolesText() .. (lead and ("   ·   " .. ns.Muted(L["main hand: %s"]:format(lead))) or "")
+            .. (Placeholders.GearEnabled() and "" or ("   ·   " .. ns.Muted(L["gear placeholders off"]))))
+        toRoles:SetShown(Placeholders.GearEnabled())
         dualHint:SetText(Placeholders.CanDualWield() and L["Backstab and Ambush put the dagger in front, everything else the weapon with \"Prefer main hand\" (none ticked: W1). The swap macros put one in each hand."]
             or L["Without Dual Wield (level 10) the swap macros change the main hand only."])
         Render()

@@ -16,13 +16,19 @@ local function BuildModules(p)
     local sections = {}
     -- texts may wrap (other fonts, longer translations): measure them
     local function Lines(fs) return math.max(14, fs:GetStringHeight() or 0) end
-    local y = -34 - Lines(intro)
+    -- the cards scroll: switches of the core first (blocks of this page), then the modules
+    local area = UI.ScrollArea(p)
+    area:SetPoint("TOPLEFT", 0, -34 - Lines(intro))
+    area:SetPoint("BOTTOMRIGHT", 0, 0)
+    area.child:SetWidth(App.CONTENT_W)
+    local list = area.child
+    local y = App:PlaceBlocks("modules", list, 0, 0, App.CONTENT_W, 10)
     local shown = 0
     for _, key in ipairs(ns.moduleOrder) do
         local m = ns.modules[key]
         if m:IsClassAllowed() then
         shown = shown + 1
-        local s = CreateFrame("Frame", nil, p)
+        local s = CreateFrame("Frame", nil, list)
         s:SetPoint("TOPLEFT", 0, y)
         s:SetSize(App.CONTENT_W, 60)
         ns.Skin(s, T.panel)
@@ -56,10 +62,15 @@ local function BuildModules(p)
         end
     end
     if shown == 0 then
-        local none = UI.Hint(p, L["There is no module for this class yet."], App.CONTENT_W)
+        local none = UI.Hint(list, L["There is no module for this class yet."], App.CONTENT_W)
         none:SetPoint("TOPLEFT", 0, y)
+        y = y - 20
     end
+    area:SetContentHeight(-y)
     modulesPage.Refresh = function()
+        for _, def in ipairs(App.blocks.modules or {}) do
+            if def.frame and def.Refresh then ns.SafeCall(def.Refresh, def) end
+        end
         for _, s in ipairs(sections) do
             local m = s.module
             s.row:Refresh()

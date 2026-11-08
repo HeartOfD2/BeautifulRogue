@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.1 (2026-11-08)
+
+- **"New gear" can ask or act on its own.** Under Macros › Placeholders, "On new gear" is **Ask** (the window, as before), **Automatically** (W1 and W2 are picked for you, gear macros follow) or **Manually** (nothing happens until you pick W1/W2 and press Refresh; choosing it asks first, and the chat names macros that no longer fit your gear). "Don't ask again" in the window switches to Automatically; pick Ask there to get the question back.
+- **Placeholders can be switched off.** Addon › Modules has a new Placeholders box (per character): **Deactivate gear placeholders** stops {w:…} and {g:…} from being filled in anywhere, templates included, and the "New gear" window is gone; **Deactivate own placeholders** does the same for {c:…}. With both, the Placeholders page disappears. {s:…} spell names always work.
+- **"Prefer main hand" moved** to the Placeholders page as a W1/W2 choice (shown while the Rogue module runs); the page is laid out anew: weapons and trinkets, then one line of settings, then the buttons; the Rogue macros page shows your weapons as one line with a button to get there.
+
 ## 1.4.0 (2026-11-06)
 
 - **Skinnable corpses sparkle.** New tab Skinning under Extras › Miscellaneous: the looted corpse your interact key would skin next sparkles, golden when you can skin it, dim from afar and grey when your skill is too low. The skinning symbol sits above the glints and the corpse's nameplate stays hidden meanwhile. On by default, only for characters with Skinning and not during combat. Needs the game's Enable Interact Key setting.

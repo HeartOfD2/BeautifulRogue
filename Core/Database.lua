@@ -215,7 +215,10 @@ do
         reset = function() ns.Char().range = ns.CopyTable(D.range) end })
     ns.RegisterReset({ key = "modules", group = "addon", order = 70, label = L["Modules"],
         desc = L["Module on/off switches and module settings."],
-        reset = function() ns.Char().modules = {} end })
+        reset = function()
+            ns.Char().modules = {}
+            ns.Char().placeholderSwitches = nil   -- the placeholders card on the Modules page
+        end })
     ns.RegisterReset({ key = "minimap", group = "addon", order = 80, label = L["Minimap button"], accountWide = true,
         desc = L["Position and visibility of the minimap button."],
         reset = function() ns.Acct().minimap = ns.CopyTable(AcctDefaults().minimap) end })

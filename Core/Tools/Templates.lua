@@ -140,6 +140,7 @@ end
 -- macros from templates follow the gear ({w:..} / {g:..})
 local function UsesGear(t) return Placeholders.UsesGear(t.body) end
 Placeholders.RegisterGearMacros({
+    IsActive = function() return Placeholders.GearEnabled() end,
     Outdated = function() return Templates.Outdated(UsesGear) end,
     Update = function() return Templates.UpdateMacros(UsesGear, true) end,
 })
@@ -415,7 +416,10 @@ function Templates.ShowImport() transfer.ShowImport() end
 -- the placeholder line under the editor: the core ones plus what each running module adds
 function Templates.UpdateHint()
     if not (editor and editor.hint) then return end
-    local parts = { L["{s:ID} spell ({s:ID:r} with rank) · {w:W1} {w:W2} weapons · {g:t1} {g:t2} trinkets · {c:name} your own"] }
+    local parts = { L["{s:ID} spell ({s:ID:r} with rank)"] }
+    -- switched off on the Modules page: not offered, not filled in
+    if Placeholders.GearEnabled() then parts[#parts + 1] = L["{w:W1} {w:W2} weapons · {g:t1} {g:t2} trinkets"] end
+    if Placeholders.CustomEnabled() then parts[#parts + 1] = L["{c:name} your own"] end
     for _, group in ipairs(Macros.templates) do
         if group.hint and (not group.IsActive or group.IsActive()) then parts[#parts + 1] = group.hint end
     end

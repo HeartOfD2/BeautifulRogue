@@ -51,6 +51,53 @@ function Placeholders.CharStore()
 end
 function Placeholders.Roles() return Placeholders.CharStore().roles end
 
+-- ---------------------------------------------------------------------------
+-- Switches (per character, Modules page): gear placeholders {w:} {g:} with the
+-- weapon roles and the gear check, own placeholders {c:}. Off: they are no
+-- longer filled in; with both off the Placeholders page is gone.
+-- ---------------------------------------------------------------------------
+-- kept apart from the roles: "Weapon roles" on the Reset page leaves them alone
+local function CharSwitches(create)
+    local c = ns.Char and ns.Char()
+    if c and create then c.placeholderSwitches = c.placeholderSwitches or {} end
+    return c and c.placeholderSwitches
+end
+function Placeholders.GearEnabled()
+    local s = CharSwitches()
+    return not (s and s.offGear)
+end
+function Placeholders.CustomEnabled()
+    local s = CharSwitches()
+    return not (s and s.offCustom)
+end
+function Placeholders.AnyEnabled() return Placeholders.GearEnabled() or Placeholders.CustomEnabled() end
+function Placeholders.SetGearEnabled(on)
+    CharSwitches(true).offGear = (not on) or nil
+    ns.Fire("MODULES_CHANGED")
+end
+function Placeholders.SetCustomEnabled(on)
+    CharSwitches(true).offCustom = (not on) or nil
+    ns.Fire("MODULES_CHANGED")
+end
+
+-- the weapon that goes into the main hand when nothing needs a dagger there:
+-- "W1", "W2" or nil (none ticked: W1). Used by macros that swap weapons.
+function Placeholders.PreferredRole()
+    local r = Placeholders.CharStore().preferMH
+    return (r == "W1" or r == "W2") and r or nil
+end
+function Placeholders.SetPreferredRole(role)
+    Placeholders.CharStore().preferMH = (role == "W1" or role == "W2") and role or nil
+end
+-- the "Prefer main hand" boxes show only while something uses them (a module
+-- registers a check, e.g. its IsActive)
+Placeholders.preferUsers = {}
+function Placeholders.UsePreferredRole(isActive) table.insert(Placeholders.preferUsers, isActive) end
+function Placeholders.PreferredRoleUsed()
+    for _, fn in ipairs(Placeholders.preferUsers) do if fn() then return true end end
+    return false
+end
+
 local function Custom()
     local a = ns.Acct()
     a.placeholders = a.placeholders or {}
@@ -270,12 +317,15 @@ end
 function Placeholders.Fill(body)
     local text = (body or ""):gsub("{s:(%d+):[rR]}", function(id) return SpellText(id, true) or ("spell " .. id) end)
     text = text:gsub("{s:(%d+)}", function(id) return SpellText(id) or ("spell " .. id) end)
-    if text:find("{w:", 1, true) then
-        local found = Placeholders.ResolveWeapons()
-        text = text:gsub("{w:[wW]([12])}", function(n) return found["W" .. n] and found["W" .. n].name or nil end)
+    -- switched off on the Modules page: those placeholders stay as they are
+    if Placeholders.GearEnabled() then
+        if text:find("{w:", 1, true) then
+            local found = Placeholders.ResolveWeapons()
+            text = text:gsub("{w:[wW]([12])}", function(n) return found["W" .. n] and found["W" .. n].name or nil end)
+        end
+        text = text:gsub("{g:[tT]([12])}", function(n) return Placeholders.Trinket(tonumber(n)) end)
     end
-    text = text:gsub("{g:[tT]([12])}", function(n) return Placeholders.Trinket(tonumber(n)) end)
-    if text:find("{c:", 1, true) then
+    if Placeholders.CustomEnabled() and text:find("{c:", 1, true) then
         text = text:gsub("{c:([^}]+)}", function(name)
             local c = Placeholders.FindCustom(name)
             return c and c.value or nil
