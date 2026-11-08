@@ -37,13 +37,19 @@ local function TooltipLines(slot)
     return lines
 end
 
--- which poison is on the weapon: the line naming one of our poisons
+-- which poison is on the weapon: the line naming one of our poisons. The
+-- longest name wins, so a name inside another one ("Numbing" in
+-- "Mind-numbing") can't take its place in any client language.
 local function IdentifyPoison(lines)
     for _, text in ipairs(lines) do
+        local bestKey, bestLen
         for _, p in ipairs(Rogue.POISONS) do
             local name = Rogue:PoisonName(p.key)
-            if name ~= p.key and text:find(name, 1, true) then return p.key, text end
+            if name ~= p.key and (not bestLen or #name > bestLen) and text:find(name, 1, true) then
+                bestKey, bestLen = p.key, #name
+            end
         end
+        if bestKey then return bestKey, text end
     end
 end
 
@@ -464,10 +470,15 @@ OpenChoice = function(anchor, hand)
     local current = Rogue:Choice(hand)
     local items = { { label = hand == "MH" and L["Main hand: choose poison"] or L["Off hand: choose poison"], isTitle = true } }
     for _, p in ipairs(Rogue.POISONS) do
-        local have = Rogue:FindPoison(p.key) ~= nil
+        local desc
+        if not Rogue:FindPoison(p.key) then
+            -- only ranks above the character's level in the bags: say from when
+            local need = Rogue:FindPoison(p.key, true) and Rogue:PoisonLevelNeeded(p.key)
+            desc = need and L["from level %d"]:format(need) or L["none in bags"]
+        end
         items[#items + 1] = {
             label = Rogue:PoisonName(p.key), icon = Rogue:PoisonIcon(p.key), checked = current == p.key,
-            desc = not have and L["none in bags"] or nil,
+            desc = desc,
             fn = function() Rogue:SetChoice(hand, p.key) end,
         }
     end

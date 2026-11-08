@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0 (2026-11-08)
+
+- **Four more poison types.** The poison choice now also lists Sebacious, Numbing and Atrophic Poison and Occult Poison (both ranks), with names and icons from your client. The poison tiles recognize them on your weapons, and the poison macros and the {p:MH} / {p:OH} placeholders can use them.
+- **Poisons above your level are skipped.** "Best available" and a picked type only use ranks you can apply at your level; if your bags hold only higher ranks, the choice says from which level.
+- **Fix: switching off the Damage numbers module holds for all characters.** Its settings were always account-wide, but the switch was per character, so another character put the fonts back. When you switch it (or the numbers above the heads) off, the chat now reminds you that the game's font for those numbers returns after logging out and in; a /reload is not enough.
+
 ## 1.5.0 (2026-11-08)
 
 - **Sharpening stones next to your poisons.** On this server a weapon holds a poison and a stone at once, so each poison tile now has a small stone button on its right: left-click applies a stone, right-click picks one for that hand. Its tooltip shows the time left; the outline turns red under 5 minutes and blinks when the stone is missing in combat (only while you carry a fitting one).

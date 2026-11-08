@@ -43,7 +43,7 @@ local function BuildModules(p)
         ns.ApplyFont(s.row.label, 13, "")
         s.status = ns.Text(s, 11)
         s.status:SetPoint("TOPRIGHT", -10, -12)
-        s.desc = UI.Hint(s, m.desc or "", App.CONTENT_W - 20)
+        s.desc = UI.Hint(s, (m.accountWide and (L["All characters"] .. " · ") or "") .. (m.desc or ""), App.CONTENT_W - 20)
         s.desc:SetPoint("TOPLEFT", 10, -30)
         local h = 38 + Lines(s.desc)
         if m.BuildOptions then

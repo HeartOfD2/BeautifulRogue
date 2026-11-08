@@ -14,9 +14,12 @@
 local _, ns = ...
 local L = ns.L
 
+-- the switch is account-wide like the settings: switched off on one character,
+-- no other character may set the fonts and CVars again
 local DT = ns.NewModule("damagetext", {
     title = L["Damage numbers"],
     desc = L["Font and behavior of the floating combat numbers."],
+    accountWide = true,
 })
 ns.DamageText = DT
 
@@ -125,10 +128,24 @@ local function SetCVars(want)
     if next(keep.orig) == nil then keep.orig = nil end
 end
 
+-- the world font this session set (and the game's one before it): switched
+-- off, the global goes back and the chat says that it takes a new login
+local worldFontSet, gameWorldFont
+
 local function ApplyWorld(on)
     if on then
         local path = DT.FontFile(DT:Get("worldFont"))
-        if path then _G.DAMAGE_TEXT_FONT = path end
+        if path then
+            if not worldFontSet then gameWorldFont = rawget(_G, "DAMAGE_TEXT_FONT") end
+            _G.DAMAGE_TEXT_FONT = path
+            worldFontSet = path
+        end
+    elseif worldFontSet then
+        if gameWorldFont then _G.DAMAGE_TEXT_FONT = gameWorldFont end
+        worldFontSet = nil
+        if ns.ready then
+            ns.Print(L["Damage numbers: the game's font for the numbers above the heads comes back after logging out and in again (/reload is not enough)."])
+        end
     end
     local touched = Store().orig ~= nil
     if not on and not touched then return end   -- nothing was ever changed: leave the game alone

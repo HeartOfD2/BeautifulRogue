@@ -29,6 +29,7 @@ L["Poisons can't be chosen during combat."] = "Gifte lassen sich im Kampf nicht 
 L["Main hand: choose poison"] = "Haupthand: Gift wählen"
 L["Off hand: choose poison"] = "Nebenhand: Gift wählen"
 L["none in bags"] = "nicht in den Taschen"
+L["from level %d"] = "ab Stufe %d"
 L["Best available"] = "Bestes verfügbares"
 L["highest rank"] = "höchster Rang"
 L["Poisons read from: %s"] = "Gifte gelesen aus: %s"

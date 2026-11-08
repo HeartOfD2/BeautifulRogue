@@ -148,13 +148,6 @@ function Rogue:StoneFits(id, hand)
     return k == "any" or w == nil or k == w
 end
 
--- the minimum level from the item data (unknown while not loaded: allowed)
-local function LevelOK(id)
-    if not (C_Item and C_Item.GetItemInfo) then return true end
-    local minLevel = select(5, C_Item.GetItemInfo(id))
-    return type(minLevel) ~= "number" or minLevel <= (UnitLevel("player") or 0)
-end
-
 function Rogue:StonePick(hand) return self:StoneSettings().pick[hand] end
 function Rogue:SetStonePick(hand, id)
     self:StoneSettings().pick[hand] = id
@@ -169,7 +162,7 @@ function Rogue:StoneFor(hand)
         return nil, pick
     end
     for _, id in ipairs(self:StoneOrder()) do
-        if ns.ItemCount(id) > 0 and self:StoneFits(id, hand) and LevelOK(id) then return id end
+        if ns.ItemCount(id) > 0 and self:StoneFits(id, hand) and self:LevelOK(id) then return id end
     end
 end
 

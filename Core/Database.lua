@@ -217,6 +217,7 @@ do
         desc = L["Module on/off switches and module settings."],
         reset = function()
             ns.Char().modules = {}
+            ns.Acct().moduleSwitches = nil        -- switches of account-wide modules
             ns.Char().placeholderSwitches = nil   -- the placeholders card on the Modules page
         end })
     ns.RegisterReset({ key = "minimap", group = "addon", order = 80, label = L["Minimap button"], accountWide = true,

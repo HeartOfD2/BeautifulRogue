@@ -5,7 +5,8 @@
 --
 --   local M = ns.NewModule("mage", { title, desc, classes = { MAGE = true },
 --                                    classHint, defaultEnabled, OnEnable,
---                                    OnActiveChanged, BuildOptions })
+--                                    OnActiveChanged, BuildOptions, accountWide })
+-- accountWide = true: the on/off switch holds for every character of the account.
 --
 -- A module hooks into the other parts of the addon through the methods below.
 -- Each one ties what it registers to the module: while the module is off (or
@@ -45,9 +46,26 @@ function Module:Settings()
     return all[self.key]
 end
 
+-- switches of modules with accountWide = true (their settings are account-wide
+-- as well, so a switch per character would leave other characters changing them)
+local function AccountSwitches()
+    local a = ns.Acct()
+    if type(a.moduleSwitches) ~= "table" then a.moduleSwitches = {} end
+    return a.moduleSwitches
+end
+
 function Module:IsEnabledSetting()
     if not ns.Char then return self.defaultEnabled ~= false end
     local s = ns.Char().modules[self.key]
+    if self.accountWide then
+        local sw = AccountSwitches()
+        -- a switch saved on this character before moves to the account once
+        if sw[self.key] == nil and s and s.enabled ~= nil and ns.dbReady then
+            sw[self.key], s.enabled = s.enabled, nil
+        end
+        if sw[self.key] ~= nil then return sw[self.key] end
+        return self.defaultEnabled ~= false
+    end
     if s and s.enabled ~= nil then return s.enabled end
     return self.defaultEnabled ~= false
 end
@@ -57,7 +75,11 @@ function Module:IsActive()
 end
 
 function Module:SetEnabled(on)
-    self:Settings().enabled = on and true or false
+    if self.accountWide then
+        AccountSwitches()[self.key] = on and true or false
+    else
+        self:Settings().enabled = on and true or false
+    end
     ns.RefreshModules()
 end
 

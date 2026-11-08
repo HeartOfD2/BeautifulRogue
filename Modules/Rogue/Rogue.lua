@@ -17,13 +17,18 @@ local Rogue = ns.NewModule("rogue", {
 })
 ns.Rogue = Rogue
 
--- poison types and their item IDs, lowest rank first
+-- poison types and their item IDs, lowest rank first. New ranks of a type go
+-- to the end of its list, new types to the end of the table (menu order).
 Rogue.POISONS = {
     { key = "instant",   ids = { 6947, 6949, 6950, 8926, 8927, 8928 } },        -- Instant Poison I-VI
     { key = "deadly",    ids = { 2892, 2893, 8984, 8985, 20844 } },   -- Deadly Poison I-V
     { key = "wound",     ids = { 10918, 10920, 10921, 10922 } },        -- Wound Poison I-IV
     { key = "mindnumb",  ids = { 5237, 6951, 9186 } },                    -- Mind-numbing Poison I-III
     { key = "crippling", ids = { 3775, 3776 } },                          -- Crippling Poison I-II
+    { key = "sebacious", ids = { 217345 } },                              -- level 60
+    { key = "numbing",   ids = { 217346 } },                              -- level 60
+    { key = "atrophic",  ids = { 217347 } },                              -- level 60
+    { key = "occult",    ids = { 226374, 234444 } },                      -- I (level 54), II (level 60)
 }
 Rogue.POISON_ICON = "Interface\\Icons\\Trade_BrewPoison"
 Rogue.HANDS = { MH = 16, OH = 17 }
@@ -80,12 +85,26 @@ function Rogue:PoisonIcon(key)
     return self.POISON_ICON
 end
 
--- highest rank in the bags of one type (nil = of any type): name, itemID
-function Rogue:FindPoison(key)
+-- the minimum level from the item data (nil while not loaded)
+function Rogue:ItemMinLevel(id)
+    if not (C_Item and C_Item.GetItemInfo) then return nil end
+    local minLevel = select(5, C_Item.GetItemInfo(id))
+    return type(minLevel) == "number" and minLevel or nil
+end
+
+-- can the character use the item? Unknown item data counts as yes
+function Rogue:LevelOK(id)
+    local need = self:ItemMinLevel(id)
+    return not need or need <= (UnitLevel("player") or 0)
+end
+
+-- highest rank in the bags of one type (nil = of any type) that the character
+-- can use (anyLevel: also the ones above its level): name, itemID
+function Rogue:FindPoison(key, anyLevel)
     local bestName, bestID, bestRank
     ns.ForEachBagItem(function(id, name)
         local k = KEY_OF_ITEM[id]
-        if k and (not key or k == key) then
+        if k and (not key or k == key) and (anyLevel or self:LevelOK(id)) then
             local rank = RANK_OF_ITEM[id]
             if not bestRank or rank > bestRank or (rank == bestRank and id > bestID) then
                 bestName, bestID, bestRank = name or ns.ItemName(id), id, rank
@@ -93,6 +112,19 @@ function Rogue:FindPoison(key)
         end
     end)
     return bestName, bestID
+end
+
+-- lowest minimum level among the bag items of one type (nil = none in the bags
+-- or level unknown): the choice shows it when only higher ranks are there
+function Rogue:PoisonLevelNeeded(key)
+    local low
+    ns.ForEachBagItem(function(id)
+        if KEY_OF_ITEM[id] == key then
+            local need = self:ItemMinLevel(id)
+            if need and (not low or need < low) then low = need end
+        end
+    end)
+    return low
 end
 
 -- the player's pick per hand (nil = whatever fits best)
