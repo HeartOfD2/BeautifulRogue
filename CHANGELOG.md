@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.0 (2026-11-09)
+
+- **Riposte icon.** A new icon shows, and blinks, while you can use Riposte after a parry; it hides as soon as you use it or the chance is gone, and only appears in combat once you know Riposte. "Riposte ›" on the Rogue box under Addon › Modules (or `/brogue riposte`) opens its settings: show it, blink, size, an optional sound with volume, and the position. While that window is open the icon shows and you can drag it anywhere. It is no button: clicks go through it.
+- **Fix: a picked stone that no longer fits the weapon** (or your level) no longer blocks the stone button; it uses the ranking until the pick fits again.
+- **Fix: right after logging in, a poison could show up as a stone** on clients where the stone is read from the weapon tooltip.
+- **Fix: "Reset › Modules" could be undone** by a Damage numbers switch still saved on a character from before 1.6.0.
+
 ## 1.6.0 (2026-11-08)
 
 - **Four more poison types.** The poison choice now also lists Sebacious, Numbing and Atrophic Poison and Occult Poison (both ranks), with names and icons from your client. The poison tiles recognize them on your weapons, and the poison macros and the {p:MH} / {p:OH} placeholders can use them.

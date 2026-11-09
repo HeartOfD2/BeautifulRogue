@@ -59,9 +59,11 @@ function Module:IsEnabledSetting()
     local s = ns.Char().modules[self.key]
     if self.accountWide then
         local sw = AccountSwitches()
-        -- a switch saved on this character before moves to the account once
-        if sw[self.key] == nil and s and s.enabled ~= nil and ns.dbReady then
-            sw[self.key], s.enabled = s.enabled, nil
+        -- a switch saved on this character before moves to the account once;
+        -- with one there already it is dropped, so a reset can't bring it back
+        if s and s.enabled ~= nil and ns.dbReady then
+            if sw[self.key] == nil then sw[self.key] = s.enabled end
+            s.enabled = nil
         end
         if sw[self.key] ~= nil then return sw[self.key] end
         return self.defaultEnabled ~= false

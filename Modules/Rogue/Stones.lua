@@ -154,10 +154,11 @@ function Rogue:SetStonePick(hand, id)
     ns.Fire("ROGUE_STONE_CHOICE", hand)
 end
 
--- the stone the button applies: itemID or nil, plus the pick when it is missing
+-- the stone the button applies: itemID or nil, plus the pick when it is missing.
+-- A pick that doesn't fit the weapon (now) or the level gives way to the ranking.
 function Rogue:StoneFor(hand)
     local pick = self:StonePick(hand)
-    if pick then
+    if pick and self:StoneFits(pick, hand) and self:LevelOK(pick) then
         if ns.ItemCount(pick) > 0 then return pick end
         return nil, pick
     end

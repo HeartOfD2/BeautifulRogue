@@ -20,6 +20,9 @@ local HAND_LABEL = { MH = L["MH"], OH = L["OH"] }
 local HAND_NAME = { MH = L["Main hand"], OH = L["Off hand"] }
 local PREFIXES = { "", "*", "alt-", "ctrl-", "shift-" }
 
+-- one tooltip line in a HUD color (the game's tooltip stays dark in every mode)
+local function TipLine(text, c, wrap) GameTooltip:AddLine(text, c[1], c[2], c[3], wrap) end
+
 -- ---------------------------------------------------------------------------
 -- Reading the weapons
 -- ---------------------------------------------------------------------------
@@ -96,6 +99,9 @@ end
 -- line with a time in brackets that names no poison. No readable line at all
 -- (secret in combat) keeps what was read last.
 local function StoneFromTooltip(hand, slot)
+    -- without every poison name a poison line can't be told from a stone line:
+    -- keep the last reading until the names have loaded (GET_ITEM_INFO_RECEIVED)
+    if not Rogue:PoisonNamesReady() then return end
     local lines = TooltipLines(slot)
     if #lines == 0 then return end
     for _, text in ipairs(lines) do
@@ -123,7 +129,7 @@ local function ReadHands()
             Rogue:SetStoneRead(hand, temp)
             listed = listed + 1
         else
-            legacy = legacy or ReadLegacy() or false
+            if legacy == nil then legacy = ReadLegacy() or false end
             enchant[hand] = legacy and legacy[hand] or nil
             if GetInventoryItemID("player", Rogue.HANDS[hand]) then StoneFromTooltip(hand, Rogue.HANDS[hand]) end
         end
@@ -417,45 +423,45 @@ end
 function el:ShowTooltip(owner, hand)
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
     local slot = Rogue.HANDS[hand]
-    GameTooltip:AddLine(("%s: %s"):format(HAND_NAME[hand], ns.EquippedName(slot) or "—"), 1, 1, 1)
+    TipLine(("%s: %s"):format(HAND_NAME[hand], ns.EquippedName(slot) or "—"), T.hudText)
     local key = Rogue:EffectiveKey(hand)
     local name = Rogue:FindPoison(key)
     if name then
-        GameTooltip:AddLine(L["Applies: %s"]:format(name), 0.8, 0.8, 0.8)
+        TipLine(L["Applies: %s"]:format(name), T.hudText)
     else
-        GameTooltip:AddLine(L["No matching poison in your bags (%s)."]:format(Rogue:PoisonName(key)), 1, 0.4, 0.4, true)
+        TipLine(L["No matching poison in your bags (%s)."]:format(Rogue:PoisonName(key)), T.hudAlert, true)
     end
     local h = self.hands[hand]
     if h and h.active then
         local now = L["On the weapon: %s, %d min"]:format(h.key and Rogue:PoisonName(h.key) or L["a poison"], h.mins or 0)
         if h.charges then now = now .. ", " .. L["%d charges"]:format(h.charges) end
-        GameTooltip:AddLine(now, 0.45, 0.85, 0.55)
+        TipLine(now, T.hudGood)
     end
-    GameTooltip:AddLine(L["Left-click: apply  ·  Right-click: choose poison"], 0.6, 0.6, 0.6)
+    TipLine(L["Left-click: apply  ·  Right-click: choose poison"], T.hudMuted)
     GameTooltip:Show()
 end
 
 function el:ShowStoneTooltip(owner, hand)
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
     local slot = Rogue.HANDS[hand]
-    GameTooltip:AddLine(("%s: %s"):format(HAND_NAME[hand], ns.EquippedName(slot) or "—"), 1, 1, 1)
+    TipLine(("%s: %s"):format(HAND_NAME[hand], ns.EquippedName(slot) or "—"), T.hudText)
     local id, missingPick = Rogue:StoneFor(hand)
     if id then
-        GameTooltip:AddLine(L["Applies: %s"]:format(Rogue:StoneName(id)), 0.8, 0.8, 0.8)
+        TipLine(L["Applies: %s"]:format(Rogue:StoneName(id)), T.hudText)
     elseif missingPick then
-        GameTooltip:AddLine(L["No %s in your bags."]:format(Rogue:StoneName(missingPick)), 1, 0.4, 0.4, true)
+        TipLine(L["No %s in your bags."]:format(Rogue:StoneName(missingPick)), T.hudAlert, true)
     else
-        GameTooltip:AddLine(L["No fitting sharpening stone in your bags."], 1, 0.4, 0.4, true)
+        TipLine(L["No fitting sharpening stone in your bags."], T.hudAlert, true)
     end
     local left, known = Rogue:StoneLeft(hand)
     if left then
-        GameTooltip:AddLine(L["Stone on the weapon: %d min"]:format(math.ceil(left / 60)), 0.45, 0.85, 0.55)
+        TipLine(L["Stone on the weapon: %d min"]:format(math.ceil(left / 60)), T.hudGood)
     elseif known then
-        GameTooltip:AddLine(L["No stone on the weapon."], 0.6, 0.6, 0.6)
+        TipLine(L["No stone on the weapon."], T.hudMuted)
     else
-        GameTooltip:AddLine(L["The stone on the weapon can't be read right now."], 0.6, 0.6, 0.6, true)
+        TipLine(L["The stone on the weapon can't be read right now."], T.hudMuted, true)
     end
-    GameTooltip:AddLine(L["Left-click: apply  ·  Right-click: choose stone"], 0.6, 0.6, 0.6)
+    TipLine(L["Left-click: apply  ·  Right-click: choose stone"], T.hudMuted)
     GameTooltip:Show()
 end
 

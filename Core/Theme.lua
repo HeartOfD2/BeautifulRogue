@@ -73,6 +73,7 @@ local T = {
     hudText  = { 0.94, 0.95, 0.97, 1 },
     hudMuted = { 0.55, 0.58, 0.64, 1 },
     hudAlert = { 1.00, 0.36, 0.36, 1 },
+    hudGood  = { 0.45, 0.85, 0.55, 1 },   -- tooltips of HUD parts: what is on the weapon
     hudNoPower  = { 0.35, 0.50, 1.00, 1 },   -- cooldown icon tint: too little resource
     hudUnusable = { 0.45, 0.45, 0.50, 1 },   -- cooldown icon tint: not usable
     sheen    = { 1, 1, 1, 0.08 },

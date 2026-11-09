@@ -23,14 +23,23 @@ function Rogue:BuildOptions(box, width)
     end, 20)
     stones:SetPoint("TOPLEFT", width + 10, 0)
     UI.Tooltip(stones, { L["Sharpening stones"], L["Stone button in the poison tiles, warning, ranking and own items."] })
+    local riposte = UI.Button(box, STONES_W, Rogue:RiposteName() .. "  ›", function()
+        if Rogue:IsActive() then Rogue:OpenRiposte() end
+    end, 20)
+    riposte:SetPoint("TOPLEFT", width + 10, -24)
+    UI.Tooltip(riposte, function()
+        return { L["Icon after a parry"], L["A blinking icon you can place anywhere while %s can be used after a parry, with a sound if you like."]:format(Rogue:RiposteName()) }
+    end)
     function Rogue:RefreshOptions()
         for _, r in ipairs(rows) do
             r:Refresh()
             r:SetDisabled(not Rogue:IsActive())   -- the module is switched off
         end
         stones:SetAlpha(Rogue:IsActive() and 1 or 0.4)
+        riposte:SetAlpha(Rogue:IsActive() and 1 or 0.4)
+        riposte.text:SetText(Rogue:RiposteName() .. "  ›")   -- the name may load late
     end
-    return 22
+    return 46
 end
 
 Rogue:Reset({ key = "poisons", group = "macros", order = 75, label = L["Poison choices"],

@@ -11,7 +11,7 @@ local L = ns.L
 
 local Rogue = ns.NewModule("rogue", {
     title = L["Rogue"],
-    desc = L["Poison tracker with one-click apply, Slice and Dice timer, weapon swap macros and macro templates."],
+    desc = L["Poison tracker with one-click apply, Slice and Dice timer, an alert after a parry, weapon swap macros and macro templates."],
     classes = { ROGUE = true },
     classHint = L["only for rogues"],
 })
@@ -71,6 +71,14 @@ function Rogue:RefreshPoisonNames()
             if n then baseName[p.key] = StripRank(n) end
         end
     end
+end
+
+-- every type has its name (the tooltip readers need all of them)
+function Rogue:PoisonNamesReady()
+    for _, p in ipairs(self.POISONS) do
+        if not baseName[p.key] then return false end
+    end
+    return true
 end
 
 function Rogue:PoisonName(key)
