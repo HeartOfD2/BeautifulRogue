@@ -7,7 +7,41 @@ local ADDON, ns = ...
 
 ns.ADDON = ADDON
 ns.TITLE = "BeautifulRogue"
-ns.LOCALE = GetLocale and GetLocale() or "enUS"
+-- The language of the game client. Spell, item and zone names always come in it, so everything about glyphs
+-- (fonts) follows it, whatever language the addon's own texts use.
+ns.CLIENT_LOCALE = GetLocale and GetLocale() or "enUS"
+
+-- The language of the addon's own texts: the player's choice, or the client language ("auto"). Texts are read while
+-- the files load, which is earlier than our own saved variables exist. So the choice lives in the saved variable of
+-- the small addon BeautifulRogue_Language: an optional dependency, loaded before us. Without that addon the table
+-- is missing and the texts follow the client. A new choice applies on the next load.
+local function LanguageStore()
+    local store = BeautifulRogueLanguageDB
+    return type(store) == "table" and store or nil
+end
+local function IsLanguage(v) return v == "enUS" or v == "deDE" end
+
+-- the choice can be kept (the helper addon is loaded)
+function ns.CanChooseLanguage() return LanguageStore() ~= nil end
+
+-- "auto", "enUS" or "deDE": what is stored, not necessarily what the loaded texts use (ns.LOCALE)
+function ns.LanguageChoice()
+    local store = LanguageStore()
+    local v = store and store.choice
+    return IsLanguage(v) and v or "auto"
+end
+
+function ns.SetLanguageChoice(choice)
+    local store = LanguageStore()
+    if not store then return false end
+    store.choice = IsLanguage(choice) and choice or nil
+    return true
+end
+
+do
+    local choice = ns.LanguageChoice()
+    ns.LOCALE = choice ~= "auto" and choice or ns.CLIENT_LOCALE
+end
 
 do
     local getMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata

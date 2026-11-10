@@ -78,7 +78,7 @@ local NEEDS = { ruRU = "cyrillic", koKR = "korean", zhCN = "chinese", zhTW = "ch
 
 -- does the font have the letters of the client language?
 function DT.FontSuits(key)
-    local need = NEEDS[ns.LOCALE]
+    local need = NEEDS[ns.CLIENT_LOCALE]
     if not need then return true end
     local f = ns.FontEntry(key)
     return f ~= nil and f.scripts ~= nil and f.scripts[need] == true

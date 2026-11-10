@@ -3,6 +3,7 @@ package-as: BeautifulRogue
 move-folders:
   BeautifulRogue/BeautifulRogue_IconData: BeautifulRogue_IconData
   BeautifulRogue/EverFrame: EverFrame
+  BeautifulRogue/BeautifulRogue_Language: BeautifulRogue_Language
 
 ignore:
   - docs

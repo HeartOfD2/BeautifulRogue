@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.0 (2026-11-10)
+
+- **Language choice.** Addon › Appearance has a new box "Language": Automatic (the language of the game), English or Deutsch. It applies after a /reload, and the box offers the reload right away. Spell, item and zone names stay in the language of the game, as they come from it. The choice is kept by the small addon "BeautifulRogue Language" that comes with the package (it has to know the language before BeautifulRogue loads); leave it enabled in the addon list. `/brogue status` shows the language in use.
+
 ## 1.7.0 (2026-11-09)
 
 - **Riposte icon.** A new icon shows, and blinks, while you can use Riposte after a parry; it hides as soon as you use it or the chance is gone, and only appears in combat once you know Riposte. "Riposte ›" on the Rogue box under Addon › Modules (or `/brogue riposte`) opens its settings: show it, blink, size, an optional sound with volume, and the position. While that window is open the icon shows and you can drag it anywhere. It is no button: clicks go through it.

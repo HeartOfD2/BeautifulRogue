@@ -3,7 +3,7 @@
 ## Notes: Combat frame for health, resource, combo points, range, threat, cooldowns, the global cooldown and swing timer, plus macro manager with assistant, notes, a cursor ring, damage numbers, camera zoom, chat tools and a rogue module.
 ## Notes-deDE: Kampfanzeige für Leben, Ressource, Combo-Punkte, Reichweite, Bedrohung, Cooldowns, den globalen Cooldown und die Swing-Leiste, dazu Makro-Manager mit Assistent, Notizen, Cursor-Ring, Schadenszahlen, Kamera-Zoom, Chat-Werkzeuge und ein Schurken-Modul.
 ## Author: HeartOfD2
-## Version: 1.7.0
+## Version: 1.8.0
 ## X-License: MIT
 ## X-Curse-Project-ID: 1729015
 ## X-Website: https://github.com/HeartOfD2/BeautifulRogue
@@ -12,7 +12,7 @@
 ## Category-deDE: Kampf
 ## SavedVariables: BeautifulRogueDB
 ## SavedVariablesPerCharacter: BeautifulRogueCharDB
-## OptionalDeps: EverFrame
+## OptionalDeps: EverFrame, BeautifulRogue_Language
 
 Core\Init.lua
 Core\Module.lua

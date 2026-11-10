@@ -17,8 +17,9 @@ ns.WHITE = "Interface\\Buttons\\WHITE8X8"
 -- Addon text uses Fira Sans SemiBold by default (ns.FONT_CHOICE_DEFAULT). The player can pick
 -- another full text font or the old Arial Narrow instead (account setting, applied by ns.ResolveFont once the
 -- saved variables exist); ns.FONT is the font in use. FONT_DEFAULT is Arial Narrow
--- (nil on clients whose script it lacks): the fallback when a font file is missing.
-ns.FONT_DEFAULT = not ({ koKR = true, zhCN = true, zhTW = true, ruRU = true })[ns.LOCALE] and "Fonts\\ARIALN.TTF" or nil
+-- (nil on clients whose script it lacks): the fallback when a font file is missing. The client language counts,
+-- not the language chosen for the addon: spell and item names come from the client.
+ns.FONT_DEFAULT = not ({ koKR = true, zhCN = true, zhTW = true, ruRU = true })[ns.CLIENT_LOCALE] and "Fonts\\ARIALN.TTF" or nil
 ns.FONT = ns.FONT_DEFAULT
 ns.FONT_CHOICE_DEFAULT = "firaSansSemi"   -- catalog key; also the damage numbers' default
 -- the fonts themselves are listed in Core/FontCatalog.lua

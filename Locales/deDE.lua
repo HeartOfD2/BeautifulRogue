@@ -130,6 +130,13 @@ L["The new font applies after a reload. Reload the interface now?"] = "Die neue 
 L["Later"] = "Später"
 L["Reload now"] = "Jetzt neu laden"
 L["Applies to all BeautifulRogue texts after /reload."] = "Gilt für alle Texte von BeautifulRogue nach /reload."
+L["LANGUAGE"] = "SPRACHE"
+L["Automatic (game language)"] = "Automatisch (Spielsprache)"
+L["Language changed"] = "Sprache geändert"
+L["The new language applies after a reload. Reload the interface now?"] = "Die neue Sprache gilt nach dem Neuladen. Die Oberfläche jetzt neu laden?"
+L["Applies after /reload. Spell, item and zone names stay in the language of the game."] = "Gilt nach /reload. Zauber-, Item- und Zonennamen bleiben in der Sprache des Spiels."
+L["Needs the addon \"BeautifulRogue Language\" (part of the package): enable it in the addon list and reload."] = "Braucht das Addon „BeautifulRogue Sprache“ (Teil des Pakets): in der Addon-Liste aktivieren und neu laden."
+L["Language: %s  ·  chosen: %s  ·  game: %s"] = "Sprache: %s  ·  gewählt: %s  ·  Spiel: %s"
 
 -- settings: layout
 L["In combat: the frame updates when combat ends."] = "Im Kampf: Die Anzeige wird nach dem Kampf aktualisiert."

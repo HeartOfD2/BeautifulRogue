@@ -1,6 +1,6 @@
 -- ---------------------------------------------------------------------------
 -- Settings page "Appearance" (Addon section): how BeautifulRogue itself looks. Dark or light
--- mode and accent color, the font and the minimap button. All of it is account-wide.
+-- mode and accent color, the font, the language and the minimap button. All of it is account-wide.
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 local L, T, UI, App = ns.L, ns.T, ns.UI, ns.App
@@ -68,18 +68,40 @@ local function BuildAppearance(p)
     local fontHint = UI.Hint(p, L["Applies to all BeautifulRogue texts after /reload."], COLW)
     fontHint:SetPoint("TOPLEFT", 0, -164)
 
+    -- language --------------------------------------------------------------------
+    -- The names of the languages stay as they are in every language. Without the helper addon the choice
+    -- cannot be kept: the box is dimmed and the hint says what is missing.
+    UI.Label(p, L["LANGUAGE"], 0, -204)
+    local canChoose = ns.CanChooseLanguage()
+    local langBox = UI.Dropdown(p, {
+        { "auto", L["Automatic (game language)"] },
+        { "enUS", "English" },
+        { "deDE", "Deutsch" },
+    }, ns.LanguageChoice, function(key)
+        if key == ns.LanguageChoice() or not ns.SetLanguageChoice(key) then return end
+        UI.MessageBox(L["Language changed"], L["The new language applies after a reload. Reload the interface now?"],
+            { { L["Later"] }, { L["Reload now"], ReloadUI, true, true } })
+    end, 200)
+    langBox:SetPoint("TOPLEFT", 0, -222)
+    langBox:SetAlpha(canChoose and 1 or 0.4)
+    local langHint = UI.Hint(p, canChoose
+        and L["Applies after /reload. Spell, item and zone names stay in the language of the game."]
+        or L["Needs the addon \"BeautifulRogue Language\" (part of the package): enable it in the addon list and reload."], COLW)
+    langHint:SetPoint("TOPLEFT", 0, -250)
+
     -- minimap button -----------------------------------------------------------------
-    UI.Label(p, L["MINIMAP"], 0, -204)
+    UI.Label(p, L["MINIMAP"], 0, -300)
     local mmRow = UI.CheckRow(p, L["Minimap button"],
         function() return ns.IsMinimapButtonShown() end,
         function(v) ns.SetMinimapButtonShown(v) end)
-    mmRow:SetPoint("TOPLEFT", 0, -222)
+    mmRow:SetPoint("TOPLEFT", 0, -318)
     local mmHint = UI.Hint(p, ns.MinimapHint(), COLW)
-    mmHint:SetPoint("TOPLEFT", 0, -246)
+    mmHint:SetPoint("TOPLEFT", 0, -342)
 
     appearancePage.Refresh = function()
         RefreshColors()
         fontBox:Refresh()
+        langBox:Refresh()
         mmRow:Refresh()
         mmHint:SetText(ns.MinimapHint())
     end

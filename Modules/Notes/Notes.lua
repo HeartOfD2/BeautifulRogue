@@ -29,6 +29,7 @@ local Module = ns.NewModule("notes", {
 -- group colors: the theme's tag palette (red, orange, amber, green, teal,
 -- blue, violet, pink, gray, cyan), tuned per mode
 local PALETTE = T.tags
+-- dates follow the language of the addon's texts (the choice on the Appearance page), like the words around them
 local DATE_LONG = ns.LOCALE == "deDE" and "%d.%m.%Y %H:%M" or "%Y-%m-%d %H:%M"
 local DATE_SHORT = ns.LOCALE == "deDE" and "%d.%m." or "%m-%d"
 

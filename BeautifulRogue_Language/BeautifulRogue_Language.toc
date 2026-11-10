@@ -1,0 +1,12 @@
+## Interface: 16001
+## Title: BeautifulRogue Language
+## Title-deDE: BeautifulRogue Sprache
+## Notes: Keeps the language you chose for BeautifulRogue, so it is known before BeautifulRogue loads. It does nothing else.
+## Notes-deDE: Merkt sich die Sprache, die du für BeautifulRogue gewählt hast, damit sie feststeht, bevor BeautifulRogue lädt. Sonst tut es nichts.
+## Author: HeartOfD2
+## Version: @project-version@
+## IconTexture: Interface\AddOns\BeautifulRogue\Media\Icon
+## X-License: MIT
+## SavedVariables: BeautifulRogueLanguageDB
+
+Language.lua

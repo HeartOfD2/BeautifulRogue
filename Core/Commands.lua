@@ -70,6 +70,7 @@ end, L["dark, light, teal, amber or blue"])
 ns.AddCommand({ "status" }, function()
     ns.Print(L["Status:"])
     print("   " .. L["Class: %s  ·  Version: %s"]:format(ns.playerClass or "?", ns.VERSION))
+    print("   " .. L["Language: %s  ·  chosen: %s  ·  game: %s"]:format(ns.LOCALE, ns.LanguageChoice(), ns.CLIENT_LOCALE))
     local active = {}
     for _, key in ipairs(ns.moduleOrder) do
         local m = ns.modules[key]
