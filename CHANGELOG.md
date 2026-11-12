@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.1 (2026-11-12)
+
+- **Riposte icon waits for the cooldown.** After you used Riposte, a new parry no longer shows the icon while the spell is still on cooldown; it appears (with the sound, if on) once 0.5 seconds of the cooldown are left.
+
 ## 1.8.0 (2026-11-10)
 
 - **Language choice.** Addon › Appearance has a new box "Language": Automatic (the language of the game), English or Deutsch. It applies after a /reload, and the box offers the reload right away. Spell, item and zone names stay in the language of the game, as they come from it. The choice is kept by the small addon "BeautifulRogue Language" that comes with the package (it has to know the language before BeautifulRogue loads); leave it enabled in the addon list. `/brogue status` shows the language in use.

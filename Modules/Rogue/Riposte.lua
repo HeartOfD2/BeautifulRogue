@@ -8,6 +8,11 @@
 -- clicks through; only while the Riposte window is open can it be dragged.
 -- IsSpellUsable ignores the cooldown, so a cast of Riposte hides the icon
 -- until the game reports it unusable and usable again (the next parry).
+-- Nor does IsSpellUsable know the cooldown: a parry within the cooldown of the
+-- last cast would show an icon for a spell that cannot be used yet. So the cast
+-- time is noted (own clock, no cooldown value is read: those are secret in
+-- combat) and the icon waits until at most READY_EARLY seconds of the
+-- cooldown are left.
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 local L, T = ns.L, ns.T
@@ -17,6 +22,8 @@ local Sound = ns.Sound
 local RIPOSTE = { 14251 }
 local IS_RIPOSTE = { [14251] = true }
 local SOUND_GAP = 1   -- seconds between two sounds at most once
+local READY_EARLY = 0.5   -- the icon shows when this many seconds of the cooldown are left
+local COOLDOWN_FALLBACK = 6   -- seconds, when the client gives no base cooldown
 
 local DEFAULTS = {
     on = true, blink = true, size = 56, x = 0, y = 140,
@@ -82,6 +89,17 @@ f.blink = blink
 -- counters for /brogue status
 local usable, overlay, consumed, fighting, preview, shown = false, false, false, false, false, false
 local seen, lastShown, lastSound = 0, nil, 0
+local readyAt, waitTimer = 0, false   -- GetTime() from which the icon may show; wake-up pending
+
+-- the cooldown of the spell in seconds (static base value from the client)
+local function CooldownSeconds()
+    local id = SpellID()
+    if id and GetSpellBaseCooldown then
+        local ok, ms = pcall(GetSpellBaseCooldown, id)
+        if ok and type(ms) == "number" and not ns.IsSecret(ms) and ms > 0 then return ms / 1000 end
+    end
+    return COOLDOWN_FALLBACK
+end
 
 local function Place()
     local size = Rogue:RiposteGet("size")
@@ -95,7 +113,7 @@ local function Wanted()
 end
 
 function Rogue:RiposteReady()
-    return (usable or overlay) and not consumed and fighting
+    return (usable or overlay) and not consumed and fighting and GetTime() >= readyAt
 end
 
 local function Apply()
@@ -130,10 +148,21 @@ local function PlayAlert()
     Sound.Play(Rogue:RiposteGet("sound"), Rogue:RiposteGet("soundVolume"))
 end
 
+local Update
+
 -- after every change of the state: a fresh window plays the sound
 local function Evaluate()
     if not (usable or overlay) then consumed = false end
     local now = Wanted() and Rogue:RiposteReady()
+    -- parried within the cooldown: look again when it is nearly over
+    local wait = readyAt - GetTime()
+    if wait > 0 and (usable or overlay) and not consumed and fighting and not waitTimer then
+        waitTimer = true
+        C_Timer.After(wait + 0.02, function()
+            waitTimer = false
+            Update()
+        end)
+    end
     if now and not shown then
         seen, lastShown = seen + 1, GetTime()
         PlayAlert()
@@ -143,7 +172,7 @@ local function Evaluate()
 end
 
 -- reads the game, then shows / hides
-local function Update()
+function Update()
     local id = SpellID()
     if not id then
         usable, overlay, consumed = false, false, false
@@ -232,6 +261,7 @@ end)
 Rogue:On("PLAYER_CAST", function(spellID)
     if not IS_RIPOSTE[spellID] then return end
     consumed = true
+    readyAt = GetTime() + CooldownSeconds() - READY_EARLY
     Evaluate()
 end)
 
@@ -250,5 +280,8 @@ Rogue:Status(function()
     if not SpellID() then return L["%s: not learned"]:format(Rogue:RiposteName()) end
     local line = L["%s: usable %s, shown %d times"]:format(Rogue:RiposteName(), usable and L["yes"] or L["no"], seen)
     if lastShown then line = line .. "  ·  " .. L["last %d s ago"]:format(math.floor(GetTime() - lastShown)) end
+    -- internal state, for a report when the icon stays away (not translated)
+    line = line .. ("  ·  [usable=%s glow=%s used=%s fight=%s wait=%.1fs]"):format(
+        tostring(usable), tostring(overlay), tostring(consumed), tostring(fighting), math.max(0, readyAt - GetTime()))
     return line
 end)
