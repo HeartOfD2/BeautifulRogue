@@ -13,17 +13,25 @@
 -- time is noted (own clock, no cooldown value is read: those are secret in
 -- combat) and the icon waits until at most READY_EARLY seconds of the
 -- cooldown are left.
+--
+-- A feature the player can switch off (Rogue.lua): while it is off, none of its
+-- events is registered, nothing is read and no frame runs. Out of combat the
+-- events that remain answer with one comparison. In combat a small frame
+-- runs, no timer: it looks again 20 times a second at most (energy comes
+-- often) and when the cooldown is nearly over.
 -- ---------------------------------------------------------------------------
 local _, ns = ...
 local L, T = ns.L, ns.T
 local Rogue = ns.Rogue
 local Sound = ns.Sound
+local F = Rogue.featureRiposte
 
 local RIPOSTE = { 14251 }
 local IS_RIPOSTE = { [14251] = true }
 local SOUND_GAP = 1   -- seconds between two sounds at most once
 local READY_EARLY = 0.5   -- the icon shows when this many seconds of the cooldown are left
 local COOLDOWN_FALLBACK = 6   -- seconds, when the client gives no base cooldown
+local TICK = 0.05   -- seconds between two looks in combat at most
 
 local DEFAULTS = {
     on = true, blink = true, size = 56, x = 0, y = 140,
@@ -89,7 +97,7 @@ f.blink = blink
 -- counters for /brogue status
 local usable, overlay, consumed, fighting, preview, shown = false, false, false, false, false, false
 local seen, lastShown, lastSound = 0, nil, 0
-local readyAt, waitTimer = 0, false   -- GetTime() from which the icon may show; wake-up pending
+local readyAt = 0   -- GetTime() from which the icon may show
 
 -- the cooldown of the spell in seconds (static base value from the client)
 local function CooldownSeconds()
@@ -109,22 +117,28 @@ local function Place()
 end
 
 local function Wanted()
-    return Rogue:IsActive() and Rogue:RiposteGet("on") and SpellID() ~= nil
+    return F.on and Rogue:RiposteGet("on") and SpellID() ~= nil
 end
 
 function Rogue:RiposteReady()
     return (usable or overlay) and not consumed and fighting and GetTime() >= readyAt
 end
 
+local visible = false   -- what Apply last did to the icon
+
 local function Apply()
     local show = preview or (Wanted() and Rogue:RiposteReady())
     if not show then
-        blink:Stop()
-        f:SetAlpha(1)
-        f:EnableMouse(false)
-        f:Hide()
+        if visible then
+            visible = false
+            blink:Stop()
+            f:SetAlpha(1)
+            f:EnableMouse(false)
+            f:Hide()
+        end
         return
     end
+    visible = true
     Place()
     f.icon:SetTexture(ns.SpellIcon(SpellID() or RIPOSTE[1]) or "Interface\\Icons\\INV_Misc_QuestionMark")
     f.icon:SetDesaturated(preview and not Rogue:RiposteKnown())
@@ -150,19 +164,33 @@ end
 
 local Update
 
+-- the small frame of a fight: it never stops existing but only has a script while
+-- a fight runs and the feature is on, so it costs nothing otherwise
+local ticker = CreateFrame("Frame")
+Rogue.riposteTicker = ticker
+local powerDirty, waiting, acc = false, false, 0
+local function Tick(_, elapsed)
+    acc = acc + elapsed
+    if acc < TICK then return end
+    acc = 0
+    if powerDirty then
+        powerDirty = false
+        Update()
+    elseif waiting and GetTime() >= readyAt then
+        Update()
+    end
+end
+local function SetTicker(on)
+    acc = 0
+    ticker:SetScript("OnUpdate", on and Tick or nil)
+end
+
 -- after every change of the state: a fresh window plays the sound
 local function Evaluate()
     if not (usable or overlay) then consumed = false end
     local now = Wanted() and Rogue:RiposteReady()
-    -- parried within the cooldown: look again when it is nearly over
-    local wait = readyAt - GetTime()
-    if wait > 0 and (usable or overlay) and not consumed and fighting and not waitTimer then
-        waitTimer = true
-        C_Timer.After(wait + 0.02, function()
-            waitTimer = false
-            Update()
-        end)
-    end
+    -- parried within the cooldown: look again when it is nearly over (the ticker does)
+    waiting = (usable or overlay) and not consumed and fighting and readyAt > GetTime() or false
     if now and not shown then
         seen, lastShown = seen + 1, GetTime()
         PlayAlert()
@@ -171,8 +199,10 @@ local function Evaluate()
     Apply()
 end
 
--- reads the game, then shows / hides
+-- reads the game, then shows / hides. Out of combat there is nothing to show
+-- (the preview of the window needs no reading): one comparison and out.
 function Update()
+    if not F.on or not (fighting or preview) then return end
     local id = SpellID()
     if not id then
         usable, overlay, consumed = false, false, false
@@ -220,63 +250,57 @@ function Rogue:SetRipostePreview(on)
 end
 
 -- ---------------------------------------------------------------------------
--- Events
+-- Events (registered only while the feature is on, see Rogue.lua)
 -- ---------------------------------------------------------------------------
 for _, ev in ipairs({ "SPELL_UPDATE_USABLE", "ACTIONBAR_UPDATE_USABLE", "SPELLS_CHANGED" }) do
-    Rogue:Event(ev, Update)
+    F:Event(ev, Update)
 end
--- the fight itself is followed even while the module is off (ns.RegisterEvent,
--- not Rogue:Event): switched on again after a fight, nothing old may show
-ns.RegisterEvent("PLAYER_REGEN_DISABLED", function()
+F:Event("PLAYER_REGEN_DISABLED", function()
     fighting = true
-    if ns.ready and Rogue:IsActive() then Update() end
+    SetTicker(true)
+    Update()
 end)
-ns.RegisterEvent("PLAYER_REGEN_ENABLED", function()
-    usable, overlay, consumed, fighting = false, false, false, false
-    if ns.ready then Evaluate() end
+F:Event("PLAYER_REGEN_ENABLED", function()
+    usable, overlay, consumed, fighting, powerDirty = false, false, false, false, false
+    SetTicker(false)
+    Evaluate()
 end)
--- energy comes often: one pass per moment
-local pending
-Rogue:UnitEvent("UNIT_POWER_UPDATE", "player", function()
-    if pending or not fighting or not Wanted() then return end
-    pending = true
-    C_Timer.After(0.05, function()
-        pending = false
-        Update()
-    end)
+-- energy comes often: marked here, looked at by the ticker (one pass per moment)
+F:UnitEvent("UNIT_POWER_UPDATE", "player", function()
+    if fighting then powerDirty = true end
 end)
 
 -- the glow events, where the client has them; a secret ID is skipped
-Rogue:Event("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", function(_, spellID)
+F:Event("SPELL_ACTIVATION_OVERLAY_GLOW_SHOW", function(_, spellID)
     if ns.IsSecret(spellID) or not IS_RIPOSTE[spellID] then return end
     overlay = true
     Update()
 end)
-Rogue:Event("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", function(_, spellID)
+F:Event("SPELL_ACTIVATION_OVERLAY_GLOW_HIDE", function(_, spellID)
     if ns.IsSecret(spellID) or not IS_RIPOSTE[spellID] then return end
     overlay = false
     Update()
 end)
 
-Rogue:On("PLAYER_CAST", function(spellID)
+F:On("PLAYER_CAST", function(spellID)
     if not IS_RIPOSTE[spellID] then return end
     consumed = true
     readyAt = GetTime() + CooldownSeconds() - READY_EARLY
     Evaluate()
 end)
 
-ns.On("LOGIN", function()
-    fighting = ns.InCombat()
-    Update()
-end)
--- module switched off (or on): its events were quiet, so read afresh
-ns.On("MODULES_CHANGED", function()
-    if not ns.ready then return end
-    if Rogue:IsActive() then Update() else Evaluate() end
+-- switched on (or the module came back): the fight is read afresh, nothing old shows;
+-- switched off: nothing is kept, the icon is gone
+F:OnChange(function(on)
+    usable, overlay, consumed, shown, waiting, powerDirty = false, false, false, false, false, false
+    fighting = on and ns.InCombat() or false
+    SetTicker(on and fighting)
+    if on then Update() else Apply() end
 end)
 ns.On("SETTINGS_RESET", function() if ns.ready then Evaluate() end end)
 
 Rogue:Status(function()
+    if not F.on then return L["%s: switched off"]:format(Rogue:RiposteName()) end
     if not SpellID() then return L["%s: not learned"]:format(Rogue:RiposteName()) end
     local line = L["%s: usable %s, shown %d times"]:format(Rogue:RiposteName(), usable and L["yes"] or L["no"], seen)
     if lastShown then line = line .. "  ·  " .. L["last %d s ago"]:format(math.floor(GetTime() - lastShown)) end

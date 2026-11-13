@@ -88,6 +88,10 @@ end
 -- its own window, built on first use; opened from the Modules page and /brogue riposte
 local win
 function Rogue:OpenRiposte()
+    if not self:RiposteOn() then
+        ns.Print(L["%s is switched off. Switch it on under Modules."]:format(self:RiposteName()))
+        return
+    end
     if not win then
         win = UI.Window("BeautifulRogueRiposteWindow", WIN_W, WIN_H, Rogue:RiposteName(), { strata = "FULLSCREEN" })
         win:SetPoint("CENTER", 300, 0)   -- beside the icon's default place, not over it
@@ -116,10 +120,10 @@ function Rogue:RiposteShown() return win ~= nil and win:IsShown() end
 Rogue:Command({ "riposte" }, function() Rogue:OpenRiposte() end,
     L["rogue: open the settings of the icon after a parry (show, blink, size, sound, position)"])
 
-Rogue:Event("SPELLS_CHANGED", function() if Render and Rogue:RiposteShown() then Render() end end)
--- the module switched off: no preview left on the screen
-ns.On("MODULES_CHANGED", function()
-    if win and win:IsShown() and not Rogue:IsActive() then win:Hide() end
+Rogue.featureRiposte:Event("SPELLS_CHANGED", function() if Render and Rogue:RiposteShown() then Render() end end)
+-- switched off (the feature or the module): no preview left on the screen
+Rogue.featureRiposte:OnChange(function(on)
+    if not on and win and win:IsShown() then win:Hide() end
 end)
 
 Rogue:Reset({ key = "riposte", group = "hud", order = 65, label = L["Icon after a parry"],

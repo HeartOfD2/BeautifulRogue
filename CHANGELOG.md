@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.0 (2026-11-13)
+
+- **Fix: the periodic stutter with the Rogue module.** The poison and sharpening-stone tiles asked the game for your bags, your weapons and their tooltips once a second, even when nothing changed. They now read on events (gear, bags, a weapon's enchant) instead, in combat every few seconds besides, and only write or redraw what actually changed.
+- **Sharpening stones and the Riposte icon can be switched off.** Addon › Modules: each one gets its own "Enabled" checkbox in front of its button. Off, nothing of it runs — no button, no warning, no window, no reading, no icon, no sound — and switching it on brings it right back, no `/reload` needed.
+
 ## 1.8.1 (2026-11-12)
 
 - **Riposte icon waits for the cooldown.** After you used Riposte, a new parry no longer shows the icon while the spell is still on cooldown; it appears (with the sound, if on) once 0.5 seconds of the cooldown are left.

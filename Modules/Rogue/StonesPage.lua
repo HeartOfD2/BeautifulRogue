@@ -198,6 +198,10 @@ end
 local WIN_W, WIN_H = 616, 470
 local win
 function Rogue:OpenStones()
+    if not self:StonesOn() then
+        ns.Print(L["%s is switched off. Switch it on under Modules."]:format(L["Sharpening stones"]))
+        return
+    end
     if not win then
         win = UI.Window("BeautifulRogueStones", WIN_W, WIN_H, L["Sharpening stones"], { strata = "FULLSCREEN" })
         win:SetPoint("CENTER")
@@ -220,10 +224,16 @@ Rogue:Command({ "stones" }, function() Rogue:OpenStones() end,
 local function RenderIfOpen()
     if Render and Rogue:StonesShown() then Render() end
 end
-Rogue:On("ROGUE_STONE_CHOICE", RenderIfOpen)
+-- these only matter while the stones are on (their events are registered then, see Rogue.lua)
+local Stones = Rogue.featureStones
+Stones:On("ROGUE_STONE_CHOICE", RenderIfOpen)
 for _, ev in ipairs({ "BAG_UPDATE", "PLAYER_EQUIPMENT_CHANGED", "GET_ITEM_INFO_RECEIVED" }) do
-    Rogue:Event(ev, RenderIfOpen)
+    Stones:Event(ev, RenderIfOpen)
 end
+-- switched off: no window left on the screen
+Stones:OnChange(function(on)
+    if not on and win and win:IsShown() then win:Hide() end
+end)
 
 Rogue:Reset({ key = "stones", group = "macros", order = 76, label = L["Sharpening stones"],
     desc = L["Ranking, own items and the stone picked for each hand go back to the defaults; the stone button shows again."],

@@ -54,9 +54,12 @@ function Rogue:StoneSettings()
     return st
 end
 
-function Rogue:StoneButtonOn() return self:StoneSettings().button ~= false end
-function Rogue:StoneWarnOn() return self:StoneSettings().warn ~= false end
+-- the stone button and the warning follow the feature switch (Rogue.lua): off means off
+function Rogue:StoneButtonOn() return self:StonesOn() and self:StoneSettings().button ~= false end
+function Rogue:StoneWarnOn() return self:StonesOn() and self:StoneSettings().warn ~= false end
 function Rogue:IsCustomStone(id) return BUILTIN_KIND[id] == nil end
+-- a stone of the list or an own item (item data of other items doesn't concern us)
+function Rogue:IsStoneItem(id) return BUILTIN_KIND[id] ~= nil or self:StoneSettings().custom[id] ~= nil end
 
 function Rogue:StoneKind(id)
     return BUILTIN_KIND[id] or self:StoneSettings().custom[id] or "any"
@@ -172,8 +175,9 @@ end
 -- ---------------------------------------------------------------------------
 local WEAPON_SLOT = { MH = "MainHand", OH = "OffHand" }
 
--- ok, imbue, temp; each enchant is { ms = time left, charges, id } or nil.
--- ok = false when the API is missing or a value is secret: the caller falls back
+-- ok, imbue ms left, imbue charges, imbue enchant ID, temporary ms left (each
+-- nil when that enchant is not there). ok = false when the API is missing or a
+-- value is secret: the caller falls back. Numbers only, no table is built.
 function Rogue:ReadEnchantList(hand)
     local fn = C_Item and C_Item.GetWeaponEnchantInfo
     local WS, ET = Enum and Enum.WeaponSlot, Enum and Enum.ItemEnchantType
@@ -181,7 +185,7 @@ function Rogue:ReadEnchantList(hand)
     if not (fn and slot and ET and ET.Imbue and ET.Temporary) then return false end
     local ok, list = pcall(fn, slot)
     if not ok or ns.IsSecret(list) then return false end
-    local imbue, temp
+    local imbueMs, imbueCharges, imbueID, tempMs
     if type(list) == "table" then
         for _, e in ipairs(list) do
             local has, kind, left = e.hasEnchant, e.enchantType, e.timeLeft
@@ -190,27 +194,40 @@ function Rogue:ReadEnchantList(hand)
                 return false
             end
             if has and type(left) == "number" and left > 0 then
-                local v = { ms = left, charges = e.charges, id = e.enchantID }
-                if kind == ET.Imbue then imbue = v elseif kind == ET.Temporary then temp = v end
+                if kind == ET.Imbue then
+                    imbueMs, imbueCharges, imbueID = left, e.charges, e.enchantID
+                elseif kind == ET.Temporary then
+                    tempMs = left
+                end
             end
         end
     end
-    return true, imbue, temp
+    return true, imbueMs, imbueCharges, imbueID, tempMs
 end
 
--- the stone on each weapon: { expires = GetTime() } / false (none) / nil
+-- the stone on each weapon: GetTime() when it runs out / false (none) / nil
 -- (never read). Kept while the list can't be read (secret in combat).
 Rogue.stoneState = {}
 
-function Rogue:SetStoneRead(hand, temp)
-    self.stoneState[hand] = temp and { expires = GetTime() + temp.ms / 1000 } or false
+function Rogue:SetStoneRead(hand, ms)
+    self.stoneState[hand] = ms and (GetTime() + ms / 1000) or false
+end
+
+-- switched off: nothing is known about the stones any more
+function Rogue:ClearStoneState()
+    self.stoneState.MH, self.stoneState.OH = nil, nil
+end
+
+-- minutes for a display: a hair of tolerance, so 20 minutes read just now stay 20
+function Rogue:Minutes(seconds)
+    return math.max(0, math.ceil((seconds - 0.05) / 60))
 end
 
 -- seconds left (nil = no stone or unknown), and whether it is known
 function Rogue:StoneLeft(hand)
-    local st = self.stoneState[hand]
-    if not st then return nil, st == false end
-    local left = st.expires - GetTime()
+    local expires = self.stoneState[hand]
+    if not expires then return nil, expires == false end
+    local left = expires - GetTime()
     if left <= 0 then
         self.stoneState[hand] = false
         return nil, true

@@ -161,3 +161,9 @@ L["rogue: open the settings of the icon after a parry (show, blink, size, sound,
 L["Icon after a parry"] = "Symbol nach einer Parade"
 L["Shown, blinking, size, sound and position of the icon go back to the defaults."] = "Anzeige, Blinken, Größe, Ton und Position des Symbols gehen auf Standard."
 L["A blinking icon you can place anywhere while %s can be used after a parry, with a sound if you like."] = "Ein blinkendes Symbol, frei platzierbar, solange %s nach einer Parade nutzbar ist, auf Wunsch mit Ton."
+-- switches of the stones and the Riposte icon (Modules page)
+L["Enabled"] = "Aktiviert"
+L["Off: no stone button in the poison tiles, no warning, no ranking, and nothing is read for the stones."] = "Aus: kein Steinknopf in den Giftkacheln, keine Warnung, keine Rangfolge, und für die Steine wird nichts gelesen."
+L["Off: no icon, no sound, and the fight is not followed for it."] = "Aus: kein Symbol, kein Ton, und der Kampf wird dafür nicht verfolgt."
+L["%s is switched off. Switch it on under Modules."] = "%s ist ausgeschaltet. Unter Module wieder einschalten."
+L["%s: switched off"] = "%s: ausgeschaltet"

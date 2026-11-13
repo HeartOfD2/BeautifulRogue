@@ -53,19 +53,160 @@ function Rogue:Settings()
 end
 
 -- ---------------------------------------------------------------------------
--- Names: from the items in the bags, else from the client's item cache
+-- Features the player can switch off (sharpening stones, Riposte icon).
+-- A feature is on while the module runs and its setting is not false. Its
+-- events sit on frames of its own that are registered only while it is on, so
+-- a switched-off feature costs the game no event at all and the module needs
+-- no check at the places that use it: they ask Rogue:StonesOn() / RiposteOn().
+--
+--   local F = Rogue:NewFeature(key, setting)
+--   F:Event(event, fn) / F:UnitEvent(event, unit, fn) / F:On(message, fn)
+--   F:OnChange(fn(on))     runs after it was switched on or off
+--   Rogue:SetFeature(key, on)    writes the setting and switches
+-- ---------------------------------------------------------------------------
+local Feature = {}
+Feature.__index = Feature
+Rogue.features = {}
+
+local function Dispatch(list, event, ...)
+    for i = 1, #list do
+        local ok, err = pcall(list[i], event, ...)
+        if not ok then
+            local handler = geterrorhandler and geterrorhandler()
+            if handler then handler(err) else print(err) end
+        end
+    end
+end
+
+function Rogue:NewFeature(key, setting)
+    local F = setmetatable({ key = key, setting = setting, on = false,
+        events = {}, unitEvents = {}, units = {}, registered = {}, changed = {} }, Feature)
+    self.features[key] = F
+    return F
+end
+
+local function FeatureFrame(F, field, handlers)
+    local f = F[field]
+    if not f then
+        f = CreateFrame("Frame")
+        f:SetScript("OnEvent", function(_, event, ...)
+            local list = handlers[event]
+            if list then Dispatch(list, event, ...) end
+        end)
+        F[field] = f
+    end
+    return f
+end
+
+function Feature:Event(event, fn)
+    local list = self.events[event]
+    if not list then
+        list = {}
+        self.events[event] = list
+    end
+    list[#list + 1] = fn
+    if self.on then self:Register() end
+end
+
+function Feature:UnitEvent(event, unit, fn)
+    local list = self.unitEvents[event]
+    if not list then
+        list = {}
+        self.unitEvents[event] = list
+    end
+    list[#list + 1] = fn
+    self.units[event] = unit
+    if self.on then self:Register() end
+end
+
+-- an internal message, answered only while the feature is on
+function Feature:On(message, fn)
+    ns.On(message, function(...) if self.on then fn(...) end end)
+end
+
+function Feature:OnChange(fn) self.changed[#self.changed + 1] = fn end
+
+-- events on or off (unknown events of other client generations are skipped quietly)
+function Feature:Register()
+    local f = FeatureFrame(self, "frame", self.events)
+    local uf = FeatureFrame(self, "uframe", self.unitEvents)
+    for event in pairs(self.events) do
+        if self.on and not self.registered[event] then
+            self.registered[event] = pcall(f.RegisterEvent, f, event) or nil
+        elseif not self.on and self.registered[event] then
+            f:UnregisterEvent(event)
+            self.registered[event] = nil
+        end
+    end
+    for event in pairs(self.unitEvents) do
+        local key = "unit:" .. event
+        if self.on and not self.registered[key] then
+            self.registered[key] = pcall(uf.RegisterUnitEvent, uf, event, self.units[event]) or nil
+        elseif not self.on and self.registered[key] then
+            uf:UnregisterEvent(event)
+            self.registered[key] = nil
+        end
+    end
+end
+
+function Feature:IsWanted()
+    return Rogue:IsActive() and Rogue:Settings()[self.setting] ~= false
+end
+
+-- brings the events and the feature's own state in line with module and setting
+function Feature:Sync()
+    local want = self:IsWanted() and true or false
+    if want == self.on then return end
+    self.on = want
+    self:Register()
+    for _, fn in ipairs(self.changed) do ns.SafeCall(fn, want) end
+end
+
+Rogue.featureStones = Rogue:NewFeature("stones", "stonesEnabled")
+Rogue.featureRiposte = Rogue:NewFeature("riposte", "riposteEnabled")
+function Rogue:StonesOn() return self.featureStones.on end
+function Rogue:RiposteOn() return self.featureRiposte.on end
+
+function Rogue:SetFeature(key, on)
+    local F = self.features[key]
+    if not F then return end
+    self:Settings()[F.setting] = on and true or false
+    F:Sync()
+end
+
+local function SyncFeatures()
+    for _, F in pairs(Rogue.features) do F:Sync() end
+end
+ns.On("LOGIN", SyncFeatures)
+ns.On("MODULES_CHANGED", SyncFeatures)
+ns.On("SETTINGS_RESET", function() if ns.ready then SyncFeatures() end end)
+
+-- ---------------------------------------------------------------------------
+-- Names and the poisons in the bags, read once per change of the bags (never
+-- per second): the poisons by item ID, the localized names without the rank
+-- numeral, from the items in the bags, else from the client's item cache
 -- ---------------------------------------------------------------------------
 local baseName = {}   -- key -> localized name without the rank numeral
+local poisonBag = {}  -- itemID -> name (true while the name is not known) of the poisons in the bags
+local bagsDirty, nameRev = true, 0
 
 local function StripRank(name) return (name:gsub("%s+[IVXLCDM]+$", "")) end
 
-function Rogue:RefreshPoisonNames()
+local function ScanBag(id, name)
+    if KEY_OF_ITEM[id] then poisonBag[id] = name or true end
+end
+
+local function Bags()
+    if not bagsDirty then return end
+    bagsDirty = false
+    nameRev = nameRev + 1
+    wipe(poisonBag)
     wipe(baseName)
-    ns.ForEachBagItem(function(id, name)
-        local key = KEY_OF_ITEM[id]
-        if key and name then baseName[key] = StripRank(name) end
-    end)
-    for _, p in ipairs(self.POISONS) do
+    ns.ForEachBagItem(ScanBag)
+    for id, name in pairs(poisonBag) do
+        if name ~= true then baseName[KEY_OF_ITEM[id]] = StripRank(name) end
+    end
+    for _, p in ipairs(Rogue.POISONS) do
         if not baseName[p.key] then
             local n = ns.ItemName(p.ids[1])
             if n then baseName[p.key] = StripRank(n) end
@@ -73,8 +214,23 @@ function Rogue:RefreshPoisonNames()
     end
 end
 
+-- the bags or the item data changed: read them again with the next question
+function Rogue:ItemsChanged() bagsDirty = true end
+
+function Rogue:RefreshPoisonNames()
+    bagsDirty = true
+    Bags()
+end
+
+-- counts up whenever the names were read afresh (a failed reading of a tooltip is tried again then)
+function Rogue:NameRev()
+    Bags()
+    return nameRev
+end
+
 -- every type has its name (the tooltip readers need all of them)
 function Rogue:PoisonNamesReady()
+    Bags()
     for _, p in ipairs(self.POISONS) do
         if not baseName[p.key] then return false end
     end
@@ -83,6 +239,7 @@ end
 
 function Rogue:PoisonName(key)
     if not key then return L["Best available"] end
+    Bags()
     return baseName[key] or key
 end
 
@@ -93,11 +250,17 @@ function Rogue:PoisonIcon(key)
     return self.POISON_ICON
 end
 
--- the minimum level from the item data (nil while not loaded)
+-- the minimum level from the item data (nil while not loaded); it never
+-- changes, so a number read once is kept
+local minLevelOf = {}
 function Rogue:ItemMinLevel(id)
+    local known = minLevelOf[id]
+    if known then return known end
     if not (C_Item and C_Item.GetItemInfo) then return nil end
     local minLevel = select(5, C_Item.GetItemInfo(id))
-    return type(minLevel) == "number" and minLevel or nil
+    if type(minLevel) ~= "number" then return nil end
+    minLevelOf[id] = minLevel
+    return minLevel
 end
 
 -- can the character use the item? Unknown item data counts as yes
@@ -109,29 +272,31 @@ end
 -- highest rank in the bags of one type (nil = of any type) that the character
 -- can use (anyLevel: also the ones above its level): name, itemID
 function Rogue:FindPoison(key, anyLevel)
+    Bags()
     local bestName, bestID, bestRank
-    ns.ForEachBagItem(function(id, name)
+    for id, name in pairs(poisonBag) do
         local k = KEY_OF_ITEM[id]
-        if k and (not key or k == key) and (anyLevel or self:LevelOK(id)) then
+        if (not key or k == key) and (anyLevel or self:LevelOK(id)) then
             local rank = RANK_OF_ITEM[id]
             if not bestRank or rank > bestRank or (rank == bestRank and id > bestID) then
-                bestName, bestID, bestRank = name or ns.ItemName(id), id, rank
+                bestName, bestID, bestRank = (name ~= true and name) or ns.ItemName(id), id, rank
             end
         end
-    end)
+    end
     return bestName, bestID
 end
 
 -- lowest minimum level among the bag items of one type (nil = none in the bags
 -- or level unknown): the choice shows it when only higher ranks are there
 function Rogue:PoisonLevelNeeded(key)
+    Bags()
     local low
-    ns.ForEachBagItem(function(id)
+    for id in pairs(poisonBag) do
         if KEY_OF_ITEM[id] == key then
             local need = self:ItemMinLevel(id)
             if need and (not low or need < low) then low = need end
         end
-    end)
+    end
     return low
 end
 
@@ -175,5 +340,12 @@ do
     end
 end
 
-Rogue:Event("BAG_UPDATE", function() Rogue:RefreshPoisonNames() end)
-Rogue:Event("GET_ITEM_INFO_RECEIVED", function() Rogue:RefreshPoisonNames() end)
+-- the item events only mark the snapshot as old; it is read at the next question.
+-- Item data arrives for any item of any addon: only ours count.
+Rogue:Event("BAG_UPDATE", function() Rogue:ItemsChanged() end)
+Rogue:Event("GET_ITEM_INFO_RECEIVED", function(_, id)
+    if type(id) == "number" and (KEY_OF_ITEM[id] or (Rogue.IsStoneItem and Rogue:IsStoneItem(id))) then Rogue:ItemsChanged() end
+end)
+Rogue:Event("PLAYER_LEVEL_UP", function() Rogue:ItemsChanged() end)
+-- events were quiet while the module was off: read the bags afresh
+ns.On("MODULES_CHANGED", function() Rogue:ItemsChanged() end)
