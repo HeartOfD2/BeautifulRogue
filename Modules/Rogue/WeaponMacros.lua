@@ -23,7 +23,7 @@ local DAGGER = 15   -- Enum.ItemWeaponSubclass.Dagger
 local TARGETS = "[@mouseover,harm,nodead][@focus,harm,nodead][] "
 local QUESTION = Macros.QUESTION_ICON
 local SUFFIX = " EF!"
-local SPELLS = { backstab = 53, ambush = 8676, sinister = 1752, kick = 1766, blind = 2094, gouge = 1776 }
+local SPELLS = { backstab = 53, ambush = 8676, sinister = 1752, kick = 1766, blind = 2094, gouge = 1776, riposte = 14251 }
 
 -- "<spell> EF!" from the client's spell name; too long for a macro name
 -- (16 letters): the first words that fit ("Sinister EF!")
@@ -49,6 +49,11 @@ local function Names()
         poisonMH = L["Poison MH"] .. SUFFIX, poisonOH = L["Poison OH"] .. SUFFIX,
     }
     for key, id in pairs(SPELLS) do n[key] = SpellMacroName(id) end
+    -- Sinister Strike + Riposte: "Fin Riposte EF!" (first letters of the one, the other in full; 16 letters at most)
+    local sin, rip = ns.SpellName(SPELLS.sinister), ns.SpellName(SPELLS.riposte)
+    if type(sin) == "string" and type(rip) == "string" and not ns.IsSecret(sin) and not ns.IsSecret(rip) then
+        n.riposte = ns.Utf8Sub(ns.Utf8Sub(sin, 3) .. " " .. rip, Macros.NAME_MAX - #SUFFIX) .. SUFFIX
+    end
     return n
 end
 
@@ -107,23 +112,28 @@ local function Build()
         out[#out + 1] = { name = Macros.ShortName(name), icon = QUESTION, body = body, skip = skip, weapon = weapon, note = note }
     end
     -- front into the main hand; with Dual Wield the other one into the off hand
-    local function swap(name, front, frontRole, back, cast)
+    -- pre (optional): a spell cast first; when it cannot be cast the macro goes on to `cast`
+    local function swap(name, front, frontRole, back, cast, pre)
         if not front then return add(name, nil, why[frontRole], true) end
         local body = "#showtooltip " .. (cast or front) .. "\n/equipslot 16 " .. front
         if dual and back then body = body .. "\n/equipslot 17 " .. back end
+        if pre then body = body .. "\n/cast " .. pre end
         if cast then body = body .. "\n/cast " .. cast end
         add(name, body, nil, true)
     end
     swap(NAMES.dagger, w1, "W1", w2)
     swap(NAMES.weapon, w2, "W2", w1)
-    local function ability(name, spell, wantDagger)
+    local function ability(name, spell, wantDagger, preSpell)
         local front, back = FrontFor(found, wantDagger)
         if not front then return add(name, nil, L["no dagger as W1 or W2"], true) end
-        swap(name, found[front] and found[front].name, front, found[back] and found[back].name, ns.SpellName(spell))
+        swap(name, found[front] and found[front].name, front, found[back] and found[back].name, ns.SpellName(spell),
+            preSpell and ns.SpellName(preSpell))
     end
     ability(NAMES.backstab, SPELLS.backstab, true)
     ability(NAMES.ambush, SPELLS.ambush, true)
     ability(NAMES.sinister, SPELLS.sinister, false)
+    -- the same, with Riposte first: it fires whenever it can, else Sinister Strike
+    ability(NAMES.riposte, SPELLS.sinister, false, SPELLS.riposte)
     local kick, blind, gouge = ns.SpellName(SPELLS.kick), ns.SpellName(SPELLS.blind), ns.SpellName(SPELLS.gouge)
     add(NAMES.kick, kick and ("#showtooltip\n/cast " .. TARGETS .. kick))
     add(NAMES.blind, blind and ("#showtooltip\n/stopattack\n/cast " .. TARGETS .. blind))

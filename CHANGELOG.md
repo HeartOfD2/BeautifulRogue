@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.10.0 (2026-11-14)
+
+- **Fix: the threat bar kept its name in the Layout list.** When it was hidden because you are not in a group, the long reason ("only shown in a group or raid") pushed the name out of the row. The reason is short now ("group only").
+- **New rogue macro "Fin Riposte EF!" (enUS: "Sin Riposte EF!").** Like "Sinister EF!" (weapons into your hands, then Sinister Strike), but with Riposte first: it fires whenever it is ready, otherwise Sinister Strike goes off. Rogue macros page › "Create missing" makes it; existing macros stay as they are.
+- **Swing timer: choose the fill direction per bar.** Layout › Swing timer: next to the main hand, off hand and ranged switch there is now a list "Left to right" (default) or "Right to left". Each bar has its own choice. Suggested by a player.
+- **Swing timer: empty when you are not attacking.** A finished bar no longer waits full while auto attack (or Auto Shot / Shoot for the ranged bar) is switched off; it goes dark until you attack again. If the game cannot tell, the bars behave as before.
+
 ## 1.9.0 (2026-11-13)
 
 - **Fix: the periodic stutter with the Rogue module.** The poison and sharpening-stone tiles asked the game for your bags, your weapons and their tooltips once a second, even when nothing changed. They now read on events (gear, bags, a weapon's enchant) instead, in combat every few seconds besides, and only write or redraw what actually changed.

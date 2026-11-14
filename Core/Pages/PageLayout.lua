@@ -479,11 +479,25 @@ local function BuildLayout(p)
             Put(panel, row, 24)
         end
         Section(panel, L["BARS"])
-        Check(panel, "swing", "main", L["Main hand"])
-        Check(panel, "swing", "off", L["Off hand"],
+        -- one row per bar: the switch on the left, the fill direction of that bar on the right
+        local dirs = { { "ltr", L["Left to right"] }, { "rtl", L["Right to left"] } }
+        local function BarRow(field, dirField, label, tip)
+            local get, set = StyleField("swing", field)
+            local row = UI.CheckRow(panel, label, function() return get() ~= false end,
+                function(v) set(v and true or false) end, INS_W - 166)
+            if tip then UI.Tooltip(row, { label, tip }) end
+            local dget, dset = StyleField("swing", dirField)
+            local dd = UI.Dropdown(panel, dirs, function() return dget() or "ltr" end, dset, 160)
+            dd:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, panel.y)
+            panel.widgets[#panel.widgets + 1] = dd
+            Put(panel, row, 26)
+        end
+        BarRow("main", "dirMain", L["Main hand"])
+        BarRow("off", "dirOff", L["Off hand"],
             L["Shows with a weapon in the off hand, or once the game has reported an off-hand swing."])
-        Check(panel, "swing", "ranged", L["Ranged"],
+        BarRow("ranged", "dirRanged", L["Ranged"],
             L["Shows with a ranged weapon (bow, gun, crossbow, wand, thrown), or once the game has reported a ranged shot."])
+        Put(panel, UI.Hint(panel, L["The list on the right sets the direction a bar fills in: from the left (default) or from the right."], INS_W), 30)
         Section(panel, L["COLOR"])
         SwatchRow(panel, "swing", "colorMain", L["Main hand"], function() return ns.SwingDefaultColor("main") end)
         SwatchRow(panel, "swing", "colorOff", L["Off hand"], function() return ns.SwingDefaultColor("off") end)

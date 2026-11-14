@@ -15,9 +15,9 @@ local HUD = ns.HUD
 local Types = Enum and Enum.PlayerSwingType
 -- display order; `slot` = the inventory slot whose weapon the bar belongs to
 local ROWS = {
-    { key = "main",   kind = (Types and Types.MainHand) or 0, slot = 16, color = "colorMain" },
-    { key = "off",    kind = (Types and Types.OffHand) or 1,  slot = 17, color = "colorOff" },
-    { key = "ranged", kind = (Types and Types.Ranged) or 2,   slot = 18, color = "colorRanged" },
+    { key = "main",   kind = (Types and Types.MainHand) or 0, slot = 16, color = "colorMain", dir = "dirMain" },
+    { key = "off",    kind = (Types and Types.OffHand) or 1,  slot = 17, color = "colorOff", dir = "dirOff" },
+    { key = "ranged", kind = (Types and Types.Ranged) or 2,   slot = 18, color = "colorRanged", dir = "dirRanged" },
 }
 local BY_KIND = {}
 for _, row in ipairs(ROWS) do BY_KIND[row.kind] = row end
@@ -34,11 +34,13 @@ local POLL = 0.03          -- seconds between two redraws of a running bar
 local RANGE_POLL = 0.25    -- seconds between two range checks of a waiting bar
 local PREVIEW_FILL = 0.6   -- how full the bars look while the Layout page is open
 local WEAPON_CLASS = 2
+local AUTO_ATTACK, AUTO_SHOT, SHOOT = 6603, 75, 5019   -- spell IDs of the attacks
 
 local swing = HUD:Register({
     key = "swing", order = 47, height = 5,
     label = L["Swing timer"],
-    style = { height = 5, main = true, off = true, ranged = true, clear = false },
+    style = { height = 5, main = true, off = true, ranged = true, clear = false,
+              dirMain = "ltr", dirOff = "ltr", dirRanged = "ltr" },
     Build = function(self, parent)
         local r = CreateFrame("Frame", nil, parent)
         self.bars, self.state = {}, {}
@@ -105,9 +107,29 @@ local function InRange(kind)
     return v
 end
 
--- a finished swing waits for the next one only while you fight with a target
-local function Waiting()
-    return UnitAffectingCombat("player") and UnitExists("target")
+-- asks a "is this spell active" API: true / false, nil when it cannot be told
+local function SpellActive(name, id)
+    local fn = (C_Spell and C_Spell[name]) or _G[name]
+    if type(fn) ~= "function" then return nil end
+    local ok, v = pcall(fn, id)
+    if not ok or ns.IsSecret(v) or type(v) ~= "boolean" then return nil end
+    return v
+end
+
+-- is this bar's kind of attack switched on? (auto attack for melee, Auto Shot / Shoot for ranged)
+-- nil when the client cannot tell: then the bar behaves as before
+local function Attacking(row)
+    if row.key == "ranged" then
+        local a, b = SpellActive("IsAutoRepeatSpell", AUTO_SHOT), SpellActive("IsAutoRepeatSpell", SHOOT)
+        if a == nil and b == nil then return nil end
+        return a == true or b == true
+    end
+    return SpellActive("IsCurrentSpell", AUTO_ATTACK)
+end
+
+-- a finished swing waits for the next one only while you fight with a target and keep attacking
+local function Waiting(row)
+    return UnitAffectingCombat("player") and UnitExists("target") and Attacking(row) ~= false
 end
 
 -- redraws the shown bars; true while something still needs the OnUpdate
@@ -124,7 +146,7 @@ function swing:Update()
                     fill:SetAlpha(1)
                     fill:Show()
                     busy = true
-                elseif Waiting() then
+                elseif Waiting(row) then
                     fill:SetValue(1)
                     fill:Show()
                     if not st.rangeAt or now - st.rangeAt >= RANGE_POLL then
@@ -211,6 +233,8 @@ function swing:ApplyStyle()
         local c = HUD:Get("swing", row.color)
         if type(c) ~= "table" then c = DEFAULT_COLOR[row.key]() end
         f.fill:SetStatusBarColor(c[1], c[2], c[3], c[4] or 1)
+        -- per bar: fills from the left (default) or from the right
+        f.fill:SetReverseFill(HUD:Get("swing", row.dir) == "rtl")
         -- optional see-through look: no track, no border, only the filled part shows
         f.skinFill = fillColor
         f.skinBg:SetColorTexture(fillColor[1], fillColor[2], fillColor[3], fillColor[4] or 1)

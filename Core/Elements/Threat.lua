@@ -34,7 +34,7 @@ local threat = HUD:Register({
 -- leave the layout; a group change re-lays it out.
 function threat:IsAvailable()
     if HUD:Get("threat", "showWhen") == "group" and not IsInGroup() then
-        return false, L["only shown in a group or raid"]
+        return false, L["group only"]
     end
     return true
 end
