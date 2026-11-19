@@ -53,17 +53,45 @@ do
         local set = current.set
         Close()
         local before = { cur[1], cur[2], cur[3] }
-        local function Changed()
+        local last = { cur[1], cur[2], cur[3] }
+        local cancelled = false
+        local function Apply()
             local r, g, b = ColorPickerFrame:GetColorRGB()
+            if type(r) ~= "number" or type(g) ~= "number" or type(b) ~= "number" then return end
+            if r == last[1] and g == last[2] and b == last[3] then return end
+            last[1], last[2], last[3] = r, g, b
             set({ r, g, b })
         end
+        local function Changed() if not cancelled then Apply() end end
+        local function Cancel()
+            cancelled = true
+            set(before)
+        end
+        -- A hex code typed into the picker does not always call the picker's callback: look at the
+        -- picker's color on our own frame while it is open (and once more as it closes, e.g. on Okay).
+        -- A session ends with Cancel; a newer session (the picker opened again) ends this one.
+        UI.colorWatch = UI.colorWatch or CreateFrame("Frame")
+        local watch = UI.colorWatch
+        local session = {}
+        watch.session = session
+        watch:SetScript("OnUpdate", function(self)
+            if self.session ~= session then return end
+            if cancelled then
+                self:SetScript("OnUpdate", nil)
+            elseif ColorPickerFrame:IsShown() then
+                Apply()
+            else
+                Apply()
+                self:SetScript("OnUpdate", nil)
+            end
+        end)
         if ColorPickerFrame and ColorPickerFrame.SetupColorPickerAndShow then
             ColorPickerFrame:SetupColorPickerAndShow({ r = cur[1], g = cur[2], b = cur[3], hasOpacity = false,
-                swatchFunc = Changed, cancelFunc = function() set(before) end })
+                swatchFunc = Changed, cancelFunc = Cancel })
         elseif ColorPickerFrame then
             ColorPickerFrame.hasOpacity = false
             ColorPickerFrame.func = Changed
-            ColorPickerFrame.cancelFunc = function() set(before) end
+            ColorPickerFrame.cancelFunc = Cancel
             ColorPickerFrame:SetColorRGB(cur[1], cur[2], cur[3])
             ColorPickerFrame:Hide()
             ColorPickerFrame:Show()
@@ -73,6 +101,35 @@ do
         current.set(nil)
         Close()
     end, 20)
+
+    -- a hex code of our own: the game's picker takes a typed code unreliably
+    local function Hex(c)
+        return ("%02X%02X%02X"):format(math.floor(c[1] * 255 + 0.5), math.floor(c[2] * 255 + 0.5), math.floor(c[3] * 255 + 0.5))
+    end
+    pop.hashText = Text(pop, 12)
+    ns.Color(pop.hashText, T.muted)
+    pop.hashText:SetText("#")
+    pop.hex = UI.LineEdit(pop, 12, 6)
+    pop.hex:SetHeight(20)
+    pop.hex:SetScript("OnTextChanged", function(self, userInput)
+        if not userInput then return end
+        local v = self:GetText()
+        if v:match("^%x%x%x%x%x%x$") and current then
+            local r, g, b = tonumber(v:sub(1, 2), 16), tonumber(v:sub(3, 4), 16), tonumber(v:sub(5, 6), 16)
+            current.set({ r / 255, g / 255, b / 255 })
+        end
+    end)
+    -- OK takes the code over (it is already applied while typing) and closes
+    local function Accept()
+        local v = pop.hex:GetText()
+        if v:match("^%x%x%x%x%x%x$") and current then
+            current.set({ tonumber(v:sub(1, 2), 16) / 255, tonumber(v:sub(3, 4), 16) / 255, tonumber(v:sub(5, 6), 16) / 255 })
+        end
+        pop.hex:ClearFocus()
+        Close()
+    end
+    pop.hex:SetScript("OnEnterPressed", Accept)
+    pop.ok = UI.Button(pop, 46, ns.L["OK"], Accept, 20)
 
     local function Open(anchor, spec)
         current = spec
@@ -93,6 +150,18 @@ do
         local width = 20 + COLS * SW + (COLS - 1) * GAP
         local y = -26 - rows * (SW + GAP) - 4
         local hasPicker = ColorPickerFrame ~= nil
+        pop.hashText:ClearAllPoints()
+        pop.hashText:SetPoint("TOPLEFT", 10, y - 3)
+        pop.hex:ClearAllPoints()
+        pop.hex:SetPoint("TOPLEFT", 22, y)
+        pop.hex:SetPoint("TOPRIGHT", -62, y)
+        pop.ok:ClearAllPoints()
+        pop.ok:SetPoint("TOPRIGHT", -10, y)
+        local cur = spec.get() or spec.fallback
+        if type(cur) == "function" then cur = cur() end
+        pop.hex:SetText(Hex(cur))
+        pop.hex:ClearFocus()
+        y = y - 28
         pop.default:ClearAllPoints()
         pop.default:SetPoint("TOPLEFT", 10, y)
         pop.default:SetWidth(hasPicker and 70 or (width - 20))

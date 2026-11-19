@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0 (2026-11-19)
+
+- **Health bar: "Reactive" color.** Layout › Health › Color › Reactive: three colors of your own for 100 %, 50 % and 0 % health (defaults 29BDAC, ECEC32, E33030) that run into each other as health drops, the same linear curve as EllesmereUI's custom dynamic color. The game evaluates the curve, so it also works in combat.
+- **Bar textures from EllesmereUI.** Layout › Health, Resource and Threat: a "Bar texture" list with the textures of EllesmereUI (read from it, nothing is copied). The default is "Fade". Without EllesmereUI the bars stay flat and the list is replaced by a note.
+- **Layout menus of Health, Resource and Threat reordered.** Each now has the sections Fill (texture, color mode, and only the colors of the chosen mode) and Text (Show text first, then format, size, alignment, color). Settings that do not apply right now are dimmed and cannot be clicked: the custom color unless "Custom" is chosen, the three health colors unless "Reactive" is chosen, the text settings while the text is off, the warning percentage while the warning is off, the five-second line settings while it is off.
+- **Color popover: an OK button** next to the hex field.
+- **Color swatches: a hex field of their own.** The color popover has a "#" box: type a code like 1B887A and the color is taken over at once (Enter closes). The game's own picker ("More colors ...") often ignored a typed code; it is now also read while it is open.
+
 ## 1.11.0 (2026-11-19)
 
 - **Swing timer: thrown weapons.** The ranged bar no longer stays empty in combat with a thrown weapon (it has no auto-repeat, so "attacking" cannot be told). **Riposte icon:** the wait after a cast is cleared when the feature is switched off and on or reset.

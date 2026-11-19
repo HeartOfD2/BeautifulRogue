@@ -20,7 +20,7 @@ local STATE_COLORS = { [0] = T.threatLow, [1] = T.threatHigh, [2] = T.threatInse
 local threat = HUD:Register({
     key = "threat", order = 45, height = 14,
     label = L["Threat bar"],
-    style = { height = 14, colorMode = "default", textSize = 11, textAlign = "CENTER", showText = true,
+    style = { height = 14, colorMode = "default", texture = "fade", textSize = 11, textAlign = "CENTER", showText = true,
               soundOn = true, sound = "RAID_WARNING", soundAt = 80, soundVolume = 100, showWhen = "always",
               soundWhen = "group" },
     Build = function(self, parent)
@@ -210,6 +210,7 @@ function threat:OnUpdate(elapsed)
 end
 
 function threat:ApplyStyle()
+    ns.ApplyBarTexture("threat", self.region)
     ns.StyleBarText("threat", self.region.text)
     self:Update()
 end

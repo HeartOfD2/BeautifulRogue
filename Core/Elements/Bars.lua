@@ -54,6 +54,104 @@ function ns.StyleTextColor(key)
     return T.hudText
 end
 
+-- Reactive health color (colorMode "reactive"): three colors of your own at 100 %, 50 % and 0 % health with a
+-- linear run between them (the same curve as EllesmereUI's custom dynamic color). The color curve is handed
+-- to UnitHealthPercent and evaluated by the game, so health never reaches our own code; the returned
+-- channels may be secret and only go to SetStatusBarColor.
+ns.REACTIVE_DEFAULT = { reactive100 = { 0x29 / 255, 0xBD / 255, 0xAC / 255 },
+                        reactive50  = { 0xEC / 255, 0xEC / 255, 0x32 / 255 },
+                        reactive0   = { 0xE3 / 255, 0x30 / 255, 0x30 / 255 } }
+local reactCurve, reactKey
+
+local function ReactiveStop(field)
+    local c = HUD:Get("health", field)
+    if type(c) == "table" and type(c[1]) == "number" and type(c[2]) == "number" and type(c[3]) == "number" then return c end
+    return ns.REACTIVE_DEFAULT[field]
+end
+
+local function ReactiveCurve()
+    if not (C_CurveUtil and C_CurveUtil.CreateColorCurve and Enum and Enum.LuaCurveType and CreateColor) then return nil end
+    local c100, c50, c0 = ReactiveStop("reactive100"), ReactiveStop("reactive50"), ReactiveStop("reactive0")
+    local key = table.concat({ c100[1], c100[2], c100[3], c50[1], c50[2], c50[3], c0[1], c0[2], c0[3] }, ",")
+    if reactCurve and reactKey == key then return reactCurve end
+    local curve = C_CurveUtil.CreateColorCurve()
+    curve:SetType(Enum.LuaCurveType.Linear)
+    curve:AddPoint(0, CreateColor(c0[1], c0[2], c0[3], 1))
+    curve:AddPoint(0.5, CreateColor(c50[1], c50[2], c50[3], 1))
+    curve:AddPoint(1, CreateColor(c100[1], c100[2], c100[3], 1))
+    reactCurve, reactKey = curve, key
+    return curve
+end
+
+-- paints a bar by the player's health percent; false when the client cannot (then the flat color stays)
+local function PaintReactive(bar)
+    local curve = ReactiveCurve()
+    if not (curve and UnitHealthPercent) then return false end
+    local ok, color = pcall(UnitHealthPercent, "player", true, curve)
+    if not (ok and color and color.GetRGB) then return false end
+    local r, g, b = color:GetRGB()
+    bar:SetStatusBarColor(r, g, b)
+    return true
+end
+
+-- Bar textures: the ones of EllesmereUI (read from it, nothing is copied), when it is loaded; the default is
+-- "fade". Without EllesmereUI every bar stays flat. "none" is the flat fill.
+local TEXTURE_DEFAULT = "fade"
+-- EllesmereUI's English names, listed once so the texts are found and translated (read from L by name below)
+ns.BAR_TEXTURE_LABELS = {
+    L["Melli (ElvUI)"],
+    L["Beautiful"],
+    L["Plating"],
+    L["Atrocity"],
+    L["Divide"],
+    L["Glass"],
+    L["Fade Right"],
+    L["Thin Line Top"],
+    L["Thin Line Bottom"],
+    L["Fade"],
+    L["Gradient Right"],
+    L["Gradient Left"],
+    L["Gradient Up"],
+    L["Gradient Down"],
+    L["Matte"],
+    L["Sheer"],
+    L["Pixels Fill"],
+    L["Pixels Dark"],
+    L["Pixels Background"],
+    L["Blinkii Diamonds"],
+    L["Kringel Window"],
+}
+local texCache
+local function Textures()
+    if texCache then return texCache end
+    local eui = rawget(_G, "EllesmereUI")
+    if type(eui) == "table" and type(eui.BuildBarTextureTables) == "function" then
+        local ok, tex, names, order = pcall(eui.BuildBarTextureTables, true)
+        if ok and type(tex) == "table" and type(order) == "table" then
+            texCache = { tex = tex, names = names or {}, order = order }
+        end
+    end
+    return texCache
+end
+-- the list for the layout page: { key, label } (nil without EllesmereUI)
+function ns.BarTextureList()
+    local t = Textures()
+    if not t then return nil end
+    local items = {}
+    for _, k in ipairs(t.order) do items[#items + 1] = { k, L[t.names[k] or k] } end
+    return items
+end
+ns.BAR_TEXTURE_DEFAULT = TEXTURE_DEFAULT
+-- sets the fill texture of a bar by the style field "texture"
+local function ApplyTexture(key, bar)
+    local t = Textures()
+    local k = HUD:Get(key, "texture") or TEXTURE_DEFAULT
+    local path = t and t.tex[k] or ns.WHITE
+    bar:SetStatusBarTexture(path)
+    bar:GetStatusBarTexture():SetDrawLayer("ARTWORK", 1)
+end
+ns.ApplyBarTexture = ApplyTexture
+
 -- text size, alignment, color and visibility of a bar's text
 local function StyleText(key, fs)
     ns.ApplyFont(fs, HUD:Get(key, "textSize") or 12, "")
@@ -79,7 +177,7 @@ ns.StyleBarText = StyleText
 local health = HUD:Register({
     key = "health", order = 10, height = 20,
     label = L["Health bar"],
-    style = { height = 20, colorMode = "default", textSize = 12, textAlign = "CENTER", showText = true,
+    style = { height = 20, colorMode = "default", texture = "fade", textSize = 12, textAlign = "CENTER", showText = true,
               warn = true, warnPct = 30 },
     Build = function(self, parent)
         local bar = MakeBar(parent, T.health, 12, "health")
@@ -116,6 +214,7 @@ function health:Update()
     local cur, max = UnitHealth("player"), UnitHealthMax("player")
     bar:SetMinMaxValues(0, max)
     bar:SetValue(cur)
+    if self.reactive then PaintReactive(bar) end
     ns.textModes.health = ns.SetValueText(bar.text, ns.Char().text.health or "{cur}", cur, max, function()
         return UnitHealthPercent("player", false, CurveConstants and CurveConstants.ScaleTo100)
     end)
@@ -138,8 +237,11 @@ end
 
 function health:ApplyStyle()
     local bar = self.region
+    ApplyTexture("health", bar)   -- before the color: a new texture starts from the bar's color
     local c = StyleColor("health", T.health)
     bar:SetStatusBarColor(c[1], c[2], c[3])
+    self.reactive = HUD:Get("health", "colorMode") == "reactive"
+    if self.reactive then self.reactive = PaintReactive(bar) end
     StyleText("health", bar.text)
     bar.zoneFrame:SetWidth(HUD.WIDTH * (HUD:Get("health", "warnPct") or 30) / 100)
     self.warn = HUD:Get("health", "warn") ~= false
@@ -157,7 +259,7 @@ health.Refresh = health.Update
 local power = HUD:Register({
     key = "power", order = 20, height = 20,
     label = L["Resource bar"],
-    style = { height = 20, colorMode = "default", textSize = 13, textAlign = "CENTER", showText = true,
+    style = { height = 20, colorMode = "default", texture = "fade", textSize = 13, textAlign = "CENTER", showText = true,
               fiveSec = true, fiveSecHeight = 3 },
     Build = function(self, parent)
         local bar = MakeBar(parent, ns.PowerColor("ENERGY"), 13, "power")
@@ -270,6 +372,7 @@ end
 
 function power:ApplyStyle()
     self.token = nil   -- recolor on the next update
+    ApplyTexture("power", self.region)
     StyleText("power", self.region.text)
     local fsr = self.region.fsr
     local c = HUD:Get("power", "fiveSecColor")

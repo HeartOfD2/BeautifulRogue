@@ -210,6 +210,27 @@ local function BuildLayout(p)
         UI.Label(panel, text, 0, panel.y)
         panel.y = panel.y - 18
     end
+    -- parts that do not apply right now (cond() false) are dimmed and cannot be clicked
+    local function Gate(panel, cond, ...)
+        local parts = { ... }
+        for _, part in ipairs(parts) do
+            if part.GetObjectType and part:GetObjectType() ~= "FontString" and not part.gateBlock then
+                local blk = CreateFrame("Frame", nil, part)
+                blk:SetAllPoints()
+                blk:SetFrameLevel(part:GetFrameLevel() + 40)
+                blk:EnableMouse(true)
+                blk:Hide()
+                part.gateBlock = blk
+            end
+        end
+        panel.widgets[#panel.widgets + 1] = { Refresh = function()
+            local on = cond() and true or false
+            for _, part in ipairs(parts) do
+                part:SetAlpha(on and 1 or 0.4)
+                if part.gateBlock then part.gateBlock:SetShown(not on) end
+            end
+        end }
+    end
     local function Slider(panel, key, field, label, minV, maxV, fmt)
         local get, set = StyleField(key, field)
         return Put(panel, UI.ValueSlider(panel, label, minV, maxV, 1, get, set, INS_W, fmt or "%d px"), 38)
@@ -229,41 +250,6 @@ local function BuildLayout(p)
         UI.Tooltip(row, { L["Colored edge"], L["A 1 px line in the edge color around this part. The color and a switch for all parts: Frame."] })
         return Put(panel, row, 24)
     end
-    -- bar color: own / class / custom, the swatch shows what the bar uses
-    local function ColorRow(panel, key, ownLabel, ownColor)
-        Section(panel, L["COLOR"])
-        local seg, swatch
-        seg = UI.Segmented(panel, {
-            { "default", ownLabel }, { "class", L["Class color"] }, { "custom", L["Custom"] },
-        }, function() return HUD:Get(key, "colorMode") or "default" end,
-        function(v)
-            if v == "custom" and not HUD:Get(key, "color") then
-                local c = ns.StyleColor(key, ownColor())
-                HUD:Set(key, "color", { c[1], c[2], c[3] })
-            end
-            HUD:Set(key, "colorMode", v)
-            swatch:Refresh()
-        end, INS_W)
-        Put(panel, seg, 28)
-        local text = ns.Text(panel, 12)
-        text:SetPoint("TOPLEFT", 0, panel.y - 3)
-        text:SetText(L["Bar color"])
-        swatch = UI.ColorSwatch(panel, L["Bar color"],
-            function() return ns.StyleColor(key, ownColor()) end,
-            function(c)
-                if c then
-                    HUD:Set(key, "color", c)
-                    HUD:Set(key, "colorMode", "custom")
-                else
-                    HUD:Set(key, "color", nil)
-                    HUD:Set(key, "colorMode", "default")
-                end
-                seg:Refresh()
-            end, ownColor)
-        swatch:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, panel.y)
-        panel.widgets[#panel.widgets + 1] = swatch
-        panel.y = panel.y - 26
-    end
     -- a labelled color swatch (nil = the default color)
     local function SwatchRow(panel, key, field, label, default)
         local text = ns.Text(panel, 12)
@@ -274,6 +260,7 @@ local function BuildLayout(p)
         sw:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, panel.y)
         panel.widgets[#panel.widgets + 1] = sw
         panel.y = panel.y - 26
+        return sw, text
     end
     -- a labelled listbox for a style field
     local function DropRow(panel, key, field, label, items, fallback)
@@ -285,7 +272,60 @@ local function BuildLayout(p)
         dd:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, panel.y)
         panel.widgets[#panel.widgets + 1] = dd
         panel.y = panel.y - 28
-        return dd
+        return dd, text
+    end
+    -- the fill texture (EllesmereUI's list; only with EllesmereUI loaded)
+    local function TextureRow(panel, key)
+        local items = ns.BarTextureList()
+        if items then
+            DropRow(panel, key, "texture", L["Bar texture"], items, ns.BAR_TEXTURE_DEFAULT)
+        else
+            Put(panel, UI.Hint(panel, L["Bar textures come from EllesmereUI; without it the bars stay flat."], INS_W), 30)
+        end
+    end
+    -- FILL: texture, then the color mode; what a mode needs is only active in that mode
+    -- (own color: "Custom"; the three health colors: "Reactive")
+    local function ColorRow(panel, key, ownLabel, ownColor, reactive)
+        Section(panel, L["FILL"])
+        TextureRow(panel, key)
+        local seg
+        local modes = { { "default", ownLabel }, { "class", L["Class color"] }, { "custom", L["Custom"] } }
+        if reactive then table.insert(modes, 3, { "reactive", L["Reactive"] }) end
+        seg = UI.Segmented(panel, modes, function() return HUD:Get(key, "colorMode") or "default" end,
+        function(v)
+            if v == "custom" and not HUD:Get(key, "color") then
+                local c = ns.StyleColor(key, ownColor())
+                HUD:Set(key, "color", { c[1], c[2], c[3] })
+            end
+            HUD:Set(key, "colorMode", v)
+        end, INS_W)
+        Put(panel, seg, 28)
+        local label = ns.Text(panel, 12)
+        label:SetPoint("TOPLEFT", 0, panel.y - 3)
+        label:SetText(L["Custom color"])
+        local swatch = UI.ColorSwatch(panel, L["Custom color"],
+            function() return HUD:Get(key, "color") or ns.StyleColor(key, ownColor()) end,
+            function(c)
+                if c then
+                    HUD:Set(key, "color", c)
+                    HUD:Set(key, "colorMode", "custom")
+                end
+            end, ownColor)
+        swatch:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, panel.y)
+        panel.widgets[#panel.widgets + 1] = swatch
+        panel.y = panel.y - 26
+        Gate(panel, function() return (HUD:Get(key, "colorMode") or "default") == "custom" end, swatch, label)
+        if reactive then
+            local parts = {}
+            for _, r in ipairs({ { "reactive100", L["Reactive: at 100 % health"] }, { "reactive50", L["Reactive: at 50 % health"] },
+                                 { "reactive0", L["Reactive: at 0 % health"] } }) do
+                local field = r[1]
+                local sw, text = SwatchRow(panel, key, field, r[2], function() return ns.REACTIVE_DEFAULT[field] end)
+                parts[#parts + 1] = sw
+                parts[#parts + 1] = text
+            end
+            Gate(panel, function() return HUD:Get(key, "colorMode") == "reactive" end, unpack(parts))
+        end
     end
     -- a sound: on/off, then the sound picker (sound + volume). Picking a sound switches it on.
     -- whenItems (optional): a listbox right of the switch that says where the sound may play (field soundWhen)
@@ -314,9 +354,12 @@ local function BuildLayout(p)
         end, INS_W)
         return Put(panel, picker, UI.SOUND_PICKER_H + 4)
     end
-    -- text format with presets, size, alignment, on/off
+    -- the text of a bar: on/off first; format, size, alignment and color only apply while it is shown
     local function TextBlock(panel, key, field, sample)
         Section(panel, L["TEXT"])
+        local showGet, showSet = StyleField(key, "showText")
+        Put(panel, UI.CheckRow(panel, L["Show text"], function() return showGet() ~= false end,
+            function(v) showSet(v and true or false) end, INS_W), 24)
         local box = UI.LineEdit(panel, 13, 60)
         box:SetSize(INS_W - 92, 24)
         Put(panel, box, 0)
@@ -360,19 +403,14 @@ local function BuildLayout(p)
         presets:SetPoint("LEFT", box, "RIGHT", 6, 0)
         panel.y = panel.y - 28
         Put(panel, preview, 20)
-        Slider(panel, key, "textSize", L["Text size"], 8, 20, "%d pt")
+        local size = Slider(panel, key, "textSize", L["Text size"], 8, 20, "%d pt")
         local get, set = StyleField(key, "textAlign")
         local align = UI.Segmented(panel, {
             { "LEFT", L["Left"] }, { "CENTER", L["Center"] }, { "RIGHT", L["Right"] },
-        }, function() return get() or "CENTER" end, set, 192)
-        Put(panel, align, 0)
-        local showGet, showSet = StyleField(key, "showText")
-        local show = UI.CheckRow(panel, L["Show text"], function() return showGet() ~= false end,
-            function(v) showSet(v and true or false) end, INS_W - 206)
-        show:SetPoint("LEFT", align, "RIGHT", 14, 0)
-        panel.widgets[#panel.widgets + 1] = show
-        panel.y = panel.y - 26
-        SwatchRow(panel, key, "textColor", L["Text color"], function() return T.hudText end)
+        }, function() return get() or "CENTER" end, set, INS_W)
+        Put(panel, align, 28)
+        local sw, label = SwatchRow(panel, key, "textColor", L["Text color"], function() return T.hudText end)
+        Gate(panel, function() return showGet() ~= false end, box, presets, preview, size, align, sw, label)
         panel.widgets[#panel.widgets + 1] = { Refresh = function()
             if not box:HasFocus() then box:SetText(ns.Char().text[field] or "{cur}") end
             RefreshPreview()
@@ -424,11 +462,13 @@ local function BuildLayout(p)
         local panel = Panel("health", L["Health"])
         Slider(panel, "health", "height", L["Height"], 10, 36)
         EdgeCheck(panel, "health")
-        ColorRow(panel, "health", L["Default"], function() return T.health end)
+        ColorRow(panel, "health", L["Default"], function() return T.health end, true)
         TextBlock(panel, "health", "health", { 300, 471 })
         Section(panel, L["LOW HEALTH"])
+        local warnOn = StyleField("health", "warn")
         Check(panel, "health", "warn", L["Mark the warning zone and pulse below it"])
-        Slider(panel, "health", "warnPct", L["Warning below"], 10, 60, "%d%%")
+        local warnPct = Slider(panel, "health", "warnPct", L["Warning below"], 10, 60, "%d%%")
+        Gate(panel, function() return warnOn() ~= false end, warnPct)
     end
 
     -- resource
@@ -445,10 +485,12 @@ local function BuildLayout(p)
         local mana = UnitPowerMax("player", Enum and Enum.PowerType and Enum.PowerType.Mana or 0)
         if ns.IsSecret(mana) or (mana or 0) > 0 then
             Section(panel, L["FIVE-SECOND RULE"])
+            local fsOn = StyleField("power", "fiveSec")
             Check(panel, "power", "fiveSec", L["Show five-second rule"],
                 L["A thin line along the bottom edge that empties in 5 seconds after a spell that costs mana. Mana only."])
-            Slider(panel, "power", "fiveSecHeight", L["Line height"], 1, 8, "%d px")
-            SwatchRow(panel, "power", "fiveSecColor", L["Color"], function() return T.hudText end)
+            local fsH = Slider(panel, "power", "fiveSecHeight", L["Line height"], 1, 8, "%d px")
+            local fsSw, fsLabel = SwatchRow(panel, "power", "fiveSecColor", L["Color"], function() return T.hudText end)
+            Gate(panel, function() return fsOn() ~= false end, fsH, fsSw, fsLabel)
         end
     end
 
@@ -589,9 +631,11 @@ local function BuildLayout(p)
         panel.y = panel.y - 30
         ColorRow(panel, "threat", L["By threat"], function() return T.threatLow end)
         Section(panel, L["TEXT"])
-        Slider(panel, "threat", "textSize", L["Text size"], 8, 16, "%d pt")
+        local tShow = StyleField("threat", "showText")
         Check(panel, "threat", "showText", L["Show text"])
-        SwatchRow(panel, "threat", "textColor", L["Text color"], function() return T.hudText end)
+        local tSize = Slider(panel, "threat", "textSize", L["Text size"], 8, 16, "%d pt")
+        local tSw, tLabel = SwatchRow(panel, "threat", "textColor", L["Text color"], function() return T.hudText end)
+        Gate(panel, function() return tShow() ~= false end, tSize, tSw, tLabel)
         -- a sound when the threat percentage reaches the limit
         Section(panel, L["SOUND"])
         SoundBlock(panel, "threat", L["Sound at"],
