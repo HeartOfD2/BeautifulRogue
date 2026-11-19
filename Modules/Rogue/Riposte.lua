@@ -293,19 +293,23 @@ end)
 -- switched off: nothing is kept, the icon is gone
 F:OnChange(function(on)
     usable, overlay, consumed, shown, waiting, powerDirty = false, false, false, false, false, false
+    readyAt = 0
     fighting = on and ns.InCombat() or false
     SetTicker(on and fighting)
     if on then Update() else Apply() end
 end)
-ns.On("SETTINGS_RESET", function() if ns.ready then Evaluate() end end)
+ns.On("SETTINGS_RESET", function()
+    readyAt = 0
+    if ns.ready then Evaluate() end
+end)
 
 Rogue:Status(function()
     if not F.on then return L["%s: switched off"]:format(Rogue:RiposteName()) end
     if not SpellID() then return L["%s: not learned"]:format(Rogue:RiposteName()) end
     local line = L["%s: usable %s, shown %d times"]:format(Rogue:RiposteName(), usable and L["yes"] or L["no"], seen)
     if lastShown then line = line .. "  ·  " .. L["last %d s ago"]:format(math.floor(GetTime() - lastShown)) end
-    -- internal state, for a report when the icon stays away (not translated)
-    line = line .. ("  ·  [usable=%s glow=%s used=%s fight=%s wait=%.1fs]"):format(
+    -- internal state, for a report when the icon stays away
+    line = line .. ("  ·  " .. L["[usable=%s glow=%s used=%s fight=%s wait=%.1fs]"]):format(
         tostring(usable), tostring(overlay), tostring(consumed), tostring(fighting), math.max(0, readyAt - GetTime()))
     return line
 end)

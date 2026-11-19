@@ -372,6 +372,7 @@ local function BuildLayout(p)
         show:SetPoint("LEFT", align, "RIGHT", 14, 0)
         panel.widgets[#panel.widgets + 1] = show
         panel.y = panel.y - 26
+        SwatchRow(panel, key, "textColor", L["Text color"], function() return T.hudText end)
         panel.widgets[#panel.widgets + 1] = { Refresh = function()
             if not box:HasFocus() then box:SetText(ns.Char().text[field] or "{cur}") end
             RefreshPreview()
@@ -543,6 +544,7 @@ local function BuildLayout(p)
         local panel = Panel("range", L["Range"], L["Distance to your target in bands of your class's abilities."])
         Slider(panel, "range", "height", L["Height"], 12, 28)
         Slider(panel, "range", "textSize", L["Text size"], 8, 16, "%d pt")
+        SwatchRow(panel, "range", "textColor", L["Text color"], function() return T.hudText end)
         EdgeCheck(panel, "range")
         -- how often the distance is checked (stored per character, not in the style)
         Section(panel, L["RANGE CHECKS"])
@@ -589,6 +591,7 @@ local function BuildLayout(p)
         Section(panel, L["TEXT"])
         Slider(panel, "threat", "textSize", L["Text size"], 8, 16, "%d pt")
         Check(panel, "threat", "showText", L["Show text"])
+        SwatchRow(panel, "threat", "textColor", L["Text color"], function() return T.hudText end)
         -- a sound when the threat percentage reaches the limit
         Section(panel, L["SOUND"])
         SoundBlock(panel, "threat", L["Sound at"],

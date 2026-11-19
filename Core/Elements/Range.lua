@@ -35,7 +35,15 @@ end
 function range:ApplyStyle()
     local size = HUD:Get("range", "textSize") or 11
     ns.ApplyFont(self.region.base, size, "")
-    for _, l in ipairs(self.layers) do ns.ApplyFont(l.text, size, "") end
+    local own = HUD:Get("range", "textColor")   -- nil: the band's own color
+    if type(own) ~= "table" then own = nil end
+    local base = own or T.hudText
+    self.region.base:SetTextColor(base[1], base[2], base[3], base[4] or 1)
+    for i, l in ipairs(self.layers) do
+        ns.ApplyFont(l.text, size, "")
+        local c = own or l.bandColor
+        if c then l.text:SetTextColor(c[1], c[2], c[3], own and own[4] or 1) end
+    end
 end
 
 function range:IsRelevant() return #self:Bands() > 0 end
@@ -76,6 +84,9 @@ function range:BuildLayers()
         local c = BAND_COLORS[#bands - i + 1] or BAND_COLORS[#BAND_COLORS]
         l.tint:SetColorTexture(c[1], c[2], c[3], 0.16)
         l.edge:SetColorTexture(c[1], c[2], c[3], 1)
+        l.bandColor = c
+        local own = HUD:Get("range", "textColor")
+        if type(own) == "table" then c = own end
         l.text:SetTextColor(c[1], c[2], c[3])
         l.text:SetText(BandLabel(band))
         l:SetAlpha(0)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.11.0 (2026-11-19)
+
+- **Swing timer: thrown weapons.** The ranged bar no longer stays empty in combat with a thrown weapon (it has no auto-repeat, so "attacking" cannot be told). **Riposte icon:** the wait after a cast is cleared when the feature is switched off and on or reset.
+- **Text color for the bars with text.** Layout › Health, Resource, Threat and Range: a new "Text color" swatch sets the font color of the bar's text (the default is the light text of the combat frame; on the range display the default keeps each band's own color). Reset with the swatch's default or "Default look".
+
 ## 1.10.0 (2026-11-14)
 
 - **Fix: the threat bar kept its name in the Layout list.** When it was hidden because you are not in a group, the long reason ("only shown in a group or raid") pushed the name out of the row. The reason is short now ("group only").

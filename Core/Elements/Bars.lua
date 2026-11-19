@@ -47,9 +47,18 @@ local function StyleColor(key, default)
 end
 ns.StyleColor = StyleColor
 
--- text size, alignment and visibility of a bar's text
+-- the text color a style asks for (field textColor; nil = the light default of the combat frame)
+function ns.StyleTextColor(key)
+    local c = HUD:Get(key, "textColor")
+    if type(c) == "table" then return c end
+    return T.hudText
+end
+
+-- text size, alignment, color and visibility of a bar's text
 local function StyleText(key, fs)
     ns.ApplyFont(fs, HUD:Get(key, "textSize") or 12, "")
+    local tc = ns.StyleTextColor(key)
+    fs:SetTextColor(tc[1], tc[2], tc[3], tc[4] or 1)
     local align = HUD:Get(key, "textAlign") or "CENTER"
     fs:ClearAllPoints()
     if align == "LEFT" then

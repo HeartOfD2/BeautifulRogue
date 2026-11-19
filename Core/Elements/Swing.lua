@@ -116,10 +116,20 @@ local function SpellActive(name, id)
     return v
 end
 
+-- a thrown weapon in the ranged slot: it has no auto-repeat spell, so "attacking" cannot be told for it
+local THROWN = (Enum and Enum.ItemWeaponSubclass and Enum.ItemWeaponSubclass.Thrown) or 16
+local function RangedIsThrown()
+    local id = GetInventoryItemID and GetInventoryItemID("player", 18)
+    if not (id and C_Item and C_Item.GetItemInfoInstant) then return false end
+    local ok, _, _, _, _, _, classID, subID = pcall(C_Item.GetItemInfoInstant, id)
+    return ok and classID == WEAPON_CLASS and subID == THROWN
+end
+
 -- is this bar's kind of attack switched on? (auto attack for melee, Auto Shot / Shoot for ranged)
 -- nil when the client cannot tell: then the bar behaves as before
 local function Attacking(row)
     if row.key == "ranged" then
+        if RangedIsThrown() then return nil end
         local a, b = SpellActive("IsAutoRepeatSpell", AUTO_SHOT), SpellActive("IsAutoRepeatSpell", SHOOT)
         if a == nil and b == nil then return nil end
         return a == true or b == true

@@ -343,8 +343,8 @@ end
 -- the item events only mark the snapshot as old; it is read at the next question.
 -- Item data arrives for any item of any addon: only ours count.
 Rogue:Event("BAG_UPDATE", function() Rogue:ItemsChanged() end)
-Rogue:Event("GET_ITEM_INFO_RECEIVED", function(_, id)
-    if type(id) == "number" and (KEY_OF_ITEM[id] or (Rogue.IsStoneItem and Rogue:IsStoneItem(id))) then Rogue:ItemsChanged() end
+Rogue:Event("GET_ITEM_INFO_RECEIVED", function(_, id, success)
+    if success ~= false and type(id) == "number" and (KEY_OF_ITEM[id] or (Rogue.IsStoneItem and Rogue:IsStoneItem(id))) then Rogue:ItemsChanged() end
 end)
 Rogue:Event("PLAYER_LEVEL_UP", function() Rogue:ItemsChanged() end)
 -- events were quiet while the module was off: read the bags afresh
