@@ -15,7 +15,8 @@ function Rogue:BuildOptions(box, width)
         if tip then UI.Tooltip(r, { label, tip }) end
         rows[#rows + 1] = r
     end
-    Row(L["Warn when a poison runs low (5 minutes or 5 charges)"], "poisonWarn", 0)
+    Row(L["Warn when a poison runs low"], "poisonWarn", 0,
+        L["When it begins and whether it blinks: Layout › Poison tracker."])
 
     -- each feature has a checkbox in front of its button; off = nothing of it runs (see Rogue.lua)
     local BTN_W, CHECK_W = 150, 96

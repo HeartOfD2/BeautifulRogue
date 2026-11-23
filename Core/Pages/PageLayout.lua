@@ -648,11 +648,17 @@ local function BuildLayout(p)
         Put(panel, UI.ValueSlider(panel, L["Limit"], 10, 100, 5, function() return atGet() or 80 end, atSet, INS_W, "%d%%"), 38)
     end
 
-    -- parts with a fixed look (def.fixedLook, e.g. a module's tiles): only the edge
+    -- parts with a fixed look (def.fixedLook, e.g. a module's tiles): the edge, and
+    -- whatever the module adds below it (def.BuildPanel(panel, api): its own settings)
+    local panelApi = {
+        width = INS_W, Put = Put, Section = Section, Gate = Gate,
+        Refresh = function() layoutPage.Refresh() end,
+    }
     for _, def in ipairs(HUD.elements) do
         if def.fixedLook then
             local panel = Panel(def.key, def.label, def.fixedLook)
             EdgeCheck(panel, def.key)
+            if def.BuildPanel then def.BuildPanel(panel, panelApi) end
         end
     end
 

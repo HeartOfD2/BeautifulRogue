@@ -7,7 +7,10 @@
 -- from the weapon enchant list, else from GetWeaponEnchantInfo; the weapon
 -- tooltip only tells which poison it is (matched by the localized item names).
 -- A tile turns red and blinks when a poison runs low or is missing in combat;
--- the stone button's outline does the same for its stone.
+-- the stone button's outline does the same for its stone. When "low" begins
+-- (minutes) and whether it blinks are settings (Layout › Poison tracker).
+-- Shift-left-click on any of the four buttons applies the next missing one:
+-- poison main hand, poison off hand, stone main hand, stone off hand.
 --
 -- Cost: nothing is asked of the game once a second. The weapons are read when
 -- something changed (equipment, weapon enchant and inventory events; in combat
@@ -21,10 +24,21 @@ local HUD, UI, Rogue = ns.HUD, ns.UI, ns.Rogue
 
 local TILE_H = 22
 local BTN = TILE_H - 6
-local LOW_MINUTES, LOW_CHARGES = 5, 5
+local LOW_MINUTES, LOW_CHARGES = 5, 5   -- the minutes are a setting (poisonWarnMinutes), this is its default
+local MINUTES_MIN, MINUTES_MAX = 1, 30
 local HAND_LABEL = { MH = L["MH"], OH = L["OH"] }
 local HAND_NAME = { MH = L["Main hand"], OH = L["Off hand"] }
-local PREFIXES = { "", "*", "alt-", "ctrl-", "shift-" }
+local PREFIXES = { "", "*", "alt-", "ctrl-" }   -- shift- is the next missing one (SetNext)
+local NOTHING = "/stopmacro"   -- shift-click with nothing missing: a macro that does nothing
+
+-- the settings of the tiles (per character, beside poisonWarn)
+function Rogue:PoisonWarnMinutes()
+    local m = tonumber(self:Settings().poisonWarnMinutes)
+    if not m then return LOW_MINUTES end
+    return math.max(MINUTES_MIN, math.min(MINUTES_MAX, math.floor(m + 0.5)))
+end
+function Rogue:PoisonBlinkOn() return self:Settings().poisonBlink ~= false end
+Rogue.POISON_WARN_RANGE = { MINUTES_MIN, MINUTES_MAX, LOW_MINUTES, LOW_CHARGES }
 
 -- one tooltip line in a HUD color (the game's tooltip stays dark in every mode)
 local function TipLine(text, c, wrap) GameTooltip:AddLine(text, c[1], c[2], c[3], wrap) end
@@ -183,7 +197,12 @@ local function MakeSecure(name, tile, icon, onRight, onEnter)
     b.hl:SetColorTexture(1, 1, 1, 0.2)
     -- PostClick is the secure-safe hook for the right-click choice
     b:SetScript("PostClick", function(self, button, down)
-        if button == "RightButton" and down ~= false then onRight(self) end
+        if down == false then return end
+        if button == "RightButton" then
+            onRight(self)
+        elseif button == "LeftButton" and IsShiftKeyDown() and self.nextMacro == NOTHING then
+            ns.Print(L["Nothing missing: every weapon has its poison and stone."])
+        end
     end)
     b:SetScript("OnEnter", onEnter)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -196,14 +215,25 @@ end
 -- set explicitly. Only button 1: an unsuffixed "type" would also answer the
 -- right-click, which then applied the item while the choice opened. Written
 -- only when the item changed (b.applyID): a write is a call into the secure code.
+local function UseMacro(itemID, slot) return ("/use item:%d\n/use %d"):format(itemID, slot) end
 local function SetApply(b, itemID, slot)
     if b.applyID == itemID and b.applySlot == slot then return end
     b.applyID, b.applySlot = itemID, slot
-    local macro = itemID and ("/use item:%d\n/use %d"):format(itemID, slot) or nil
+    local macro = itemID and UseMacro(itemID, slot) or nil
     for _, prefix in ipairs(PREFIXES) do
         b:SetAttribute(prefix .. "type1", macro and "macro" or nil)
         b:SetAttribute(prefix .. "macrotext1", macro)
     end
+end
+
+-- shift-left-click: the next missing one (the same on all four buttons); with
+-- nothing missing a macro that does nothing, else "*type1" would answer it
+local function SetNext(b, macro)
+    macro = macro or NOTHING
+    if b.nextMacro == macro then return end
+    b.nextMacro = macro
+    b:SetAttribute("shift-type1", "macro")
+    b:SetAttribute("shift-macrotext1", macro)
 end
 
 -- icon, grey and dim of a button, set only when they differ from the last time
@@ -382,6 +412,7 @@ function el:Read()
         end
     end
     self.unidentified = unidentified
+    self.dirtyApply = true   -- what is missing may have changed (the next one for shift-click)
     Rogue.readMode = listed == 2 and L["weapon enchant list"]
         or anyInfo and L["weapon enchant info"] or L["tooltip text"]
 end
@@ -416,6 +447,42 @@ function el:Apply()
         end
         SetApply(self.stones[hand], self.sItem[hand], slot)
     end
+    local nxt = self:NextMissing()
+    self.next = nxt
+    local macro = nxt and UseMacro(nxt.id, Rogue.HANDS[nxt.hand]) or nil
+    for _, hand in ipairs(HAND_LIST) do
+        SetNext(self.buttons[hand], macro)
+        SetNext(self.stones[hand], macro)
+    end
+end
+
+-- the next missing one, in this order: poison main hand, poison off hand, stone
+-- main hand, stone off hand. Only a weapon without it, with a fitting item in
+-- the bags; a stone that can't be read right now counts as there.
+-- Returns { kind = "poison"|"stone", hand, id, key } (one table, reused) or nil.
+local nextBuf = {}
+function el:NextMissing()
+    if UnitLevel("player") >= 20 then   -- poisons come at level 20
+        for _, hand in ipairs(HAND_LIST) do
+            local r, id = self.read[hand], self.pItem[hand]
+            if r.weapon and not r.active and id then
+                nextBuf.kind, nextBuf.hand, nextBuf.id, nextBuf.key = "poison", hand, id, self.pKey[hand]
+                return nextBuf
+            end
+        end
+    end
+    if Rogue:StonesOn() then
+        for _, hand in ipairs(HAND_LIST) do
+            local id = self.sItem[hand]
+            if self.read[hand].weapon and id then
+                local left, known = Rogue:StoneLeft(hand)
+                if left == nil and known then
+                    nextBuf.kind, nextBuf.hand, nextBuf.id, nextBuf.key = "stone", hand, id, nil
+                    return nextBuf
+                end
+            end
+        end
+    end
 end
 
 -- the hand label (MH/OH) gives way when the stone button leaves too little room
@@ -447,11 +514,12 @@ local function DrawStone(self, hand, inCombat)
     local alert = false
     if self.stoneOn and r.weapon then
         local warn = Rogue:StoneWarnOn()   -- the stones have their own switch for the warning
+        local lowAt = Rogue:PoisonWarnMinutes() * 60
         local id = self.sItem[hand]
         local left = Rogue:StoneLeft(hand)
         local has = left ~= nil
         if warn and id then
-            if left and left <= LOW_MINUTES * 60 then
+            if left and left <= lowAt then
                 alert = "low"
             elseif not left and inCombat then
                 alert = "missing"
@@ -469,7 +537,8 @@ local function DrawStone(self, hand, inCombat)
     self.stoneAlert[hand] = alert
     if s.dAlert ~= alert then
         s.dAlert = alert
-        if alert ~= "missing" then ns.SetEdgeColor(s, alert and T.hudAlert or nil) end
+        -- a missing stone blinks (Animate); without blinking it stays red
+        if alert ~= "missing" or not self.blink then ns.SetEdgeColor(s, alert and T.hudAlert or nil) end
     end
     return alert
 end
@@ -479,6 +548,8 @@ end
 function el:Draw()
     local inCombat = UnitAffectingCombat("player") and true or false
     local warn = Rogue:Settings().poisonWarn ~= false
+    local lowAt = Rogue:PoisonWarnMinutes()
+    self.blink = Rogue:PoisonBlinkOn()
     local noPoison = UnitLevel("player") < 20   -- poisons come at level 20 (stones work from level 1)
     local now = GetTime()
     local animating = false
@@ -490,7 +561,7 @@ function el:Draw()
                 local left = r.expires - now
                 if left > 0 then
                     state, mins = 1, Rogue:Minutes(left)
-                    low = warn and (mins <= LOW_MINUTES or (r.charges ~= nil and r.charges <= LOW_CHARGES)) or false
+                    low = warn and (mins <= lowAt or (r.charges ~= nil and r.charges <= LOW_CHARGES)) or false
                 else
                     r.active = false      -- ran out: the game confirms with its next reading
                     self.dirtyRead = true
@@ -521,7 +592,7 @@ function el:Draw()
         self.alert[hand] = alert
         if DrawStone(self, hand, inCombat) or alert then animating = true end
     end
-    self.animating = animating
+    self.animating = animating and self.blink   -- without blinking the warnings only turn red
 end
 
 -- the pieces of work whose flag is set, in this order
@@ -605,6 +676,17 @@ function el:Refresh()
     self:Update()
 end
 
+-- what shift-left-click does now (set out of combat: in combat it stays what it was)
+function el:NextTip()
+    local n = self.next
+    if n then
+        local name = n.kind == "stone" and Rogue:StoneName(n.id) or Rogue:FindPoison(n.key) or Rogue:PoisonName(n.key)
+        TipLine(L["Shift-left-click: %s (%s)"]:format(name, HAND_NAME[n.hand]), T.hudMuted, true)
+    else
+        TipLine(L["Shift-left-click: nothing missing"], T.hudMuted)
+    end
+end
+
 function el:ShowTooltip(owner, hand)
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
     local slot = Rogue.HANDS[hand]
@@ -624,6 +706,7 @@ function el:ShowTooltip(owner, hand)
         TipLine(now, T.hudGood)
     end
     TipLine(L["Left-click: apply  ·  Right-click: choose poison"], T.hudMuted)
+    self:NextTip()
     GameTooltip:Show()
 end
 
@@ -648,6 +731,7 @@ function el:ShowStoneTooltip(owner, hand)
         TipLine(L["The stone on the weapon can't be read right now."], T.hudMuted, true)
     end
     TipLine(L["Left-click: apply  ·  Right-click: choose stone"], T.hudMuted)
+    self:NextTip()
     GameTooltip:Show()
 end
 
@@ -795,3 +879,59 @@ Rogue:Status(function()
     if #parts > 0 then line = line .. "  ·  [" .. table.concat(parts, ", ") .. "]" end
     return line
 end)
+
+-- ---------------------------------------------------------------------------
+-- Settings on the Layout page (the panel of the poison tracker, below the edge):
+-- when the warning begins, whether it blinks, the stones as a whole
+-- ---------------------------------------------------------------------------
+function el.BuildPanel(panel, api)
+    local W = api.width
+    local function S() return Rogue:Settings() end
+    local function Changed()
+        el:Invalidate()
+        el:Update()
+    end
+    local function Check(label, get, set, tip)
+        local row = UI.CheckRow(panel, label, get, function(v)
+            set(v and true or false)
+            Changed()
+            api.Refresh()   -- the parts that depend on it dim or light up
+        end, W)
+        UI.Tooltip(row, type(tip) == "table" and tip or { label, tip })
+        return api.Put(panel, row, 24)
+    end
+    local range = Rogue.POISON_WARN_RANGE
+
+    api.Section(panel, L["WARNING"])
+    Check(L["Warn when a poison runs low"], function() return S().poisonWarn ~= false end,
+        function(v) S().poisonWarn = v end,
+        L["The tile turns red at the minutes below or at %d charges; in combat it says \"missing\" when the poison is gone."]:format(range[4]))
+    local minutes = api.Put(panel, UI.ValueSlider(panel, L["Warn at"], range[1], range[2], 1,
+        function() return Rogue:PoisonWarnMinutes() end,
+        function(v)
+            S().poisonWarnMinutes = v
+            Changed()
+        end, W, L["%d min left"]), 38)
+    UI.Tooltip(minutes, { L["Warn at"], L["Minutes left on the weapon when the warning begins. The same for the stones (they have their own switch for the warning)."] })
+    local blink = Check(L["Blink"], function() return Rogue:PoisonBlinkOn() end,
+        function(v) S().poisonBlink = v end,
+        L["A poison that runs low pulses, a missing one blinks in combat; the same for the outline of the stone button. Off: they only turn red."])
+    -- the minutes and the blinking count while one of the two warnings is on
+    api.Gate(panel, function() return S().poisonWarn ~= false or Rogue:StoneWarnOn() end, minutes, blink)
+
+    api.Section(panel, L["SHARPENING STONES"])
+    Check(L["Use sharpening stones"], function() return Rogue:StonesOn() end,
+        function(v)
+            Rogue:SetFeature("stones", v)
+            if Rogue.RefreshOptions then Rogue:RefreshOptions() end   -- the same switch on the Modules page
+        end,
+        { L["Sharpening stones"], L["Off: no stone button in the poison tiles, no warning, no ranking, and nothing is read for the stones."] })
+    local open = api.Put(panel, UI.Button(panel, 180, L["Sharpening stones"] .. "  ›", function()
+        if Rogue:StonesOn() then Rogue:OpenStones() end
+    end, 22), 30)
+    UI.Tooltip(open, { L["Sharpening stones"], L["Stone button in the poison tiles, warning, ranking and own items."] })
+    api.Gate(panel, function() return Rogue:StonesOn() end, open)
+
+    api.Section(panel, L["SHIFT-CLICK"])
+    api.Put(panel, UI.Hint(panel, L["Shift-left-click on a poison or stone button applies the next missing one: the poison on the main hand, then on the off hand, then the stones in the same order. Click again for the next one."], W), 44)
+end

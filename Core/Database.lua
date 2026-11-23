@@ -126,6 +126,7 @@ end
 
 function ns.InitDatabase()
     TakeOverEverFrame()
+    ns.freshDatabase = type(BeautifulRogueDB) ~= "table"   -- a first install (What's new stays shut)
     if type(BeautifulRogueDB) ~= "table" then BeautifulRogueDB = {} end
     if type(BeautifulRogueCharDB) ~= "table" then BeautifulRogueCharDB = {} end
     Migrate(BeautifulRogueDB, MIGRATIONS.acct)

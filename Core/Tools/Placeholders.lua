@@ -313,8 +313,9 @@ local function SpellText(id, withRank)
 end
 
 -- macro text with every placeholder filled in that has a value right now;
--- the rest stays as it is (Placeholders.Unfilled lists it)
-function Placeholders.Fill(body)
+-- the rest stays as it is (Placeholders.Unfilled lists it). Cut to the macro
+-- length unless full is set (callers that check the length themselves)
+function Placeholders.Fill(body, full)
     local text = (body or ""):gsub("{s:(%d+):[rR]}", function(id) return SpellText(id, true) or ("spell " .. id) end)
     text = text:gsub("{s:(%d+)}", function(id) return SpellText(id) or ("spell " .. id) end)
     -- switched off on the Modules page: those placeholders stay as they are
@@ -334,6 +335,7 @@ function Placeholders.Fill(body)
     for _, group in ipairs(Macros.templates) do
         if group.Fill and (not group.IsActive or group.IsActive()) then text = group.Fill(text) end
     end
+    if full then return text end
     return ns.Utf8Sub(text, Macros.BODY_MAX)
 end
 

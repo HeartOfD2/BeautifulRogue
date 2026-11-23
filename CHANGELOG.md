@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.13.0 (2026-11-23)
+
+- **What's new window.** After an update a window shows the new features once, in English or German. Switch it off in the window or under Addon › Modules › What's new; `/brogue news` opens it again. A fresh install doesn't show it.
+- **Rogue macros keep your own text.** Every rogue macro now has a default text with placeholders (`{r:front}` / `{r:back}` for the weapon the macro puts into the main / off hand, `{p:MH}` / `{p:OH}` for the poison, `{s:…}` for spell names), filled in whenever it is written. Your own version of a macro is kept for all characters and filled in the same way, so it follows new weapons and poisons too. A line whose placeholder is empty (the off-hand line without Dual Wield) is left out. Edited macros are marked "EDITED" in the list. The default macros are written exactly as before.
+- **Edit the rogue macros.** Rogue macros page: "Edit ..." under the list (or double-click a macro) opens an editor in the look of the macro assistant. The name stays as it is; the text is edited with placeholders, "Insert placeholder" and "Find spell" put them in at the cursor, and the preview next to it shows the text as it goes into the game with its length. Save is locked with the reason while the filled text is longer than 255 letters, empty, or a placeholder has no value. "Default" puts the default text back into the field and into the macro; "Cancel" closes without saving.
+- **Reset one or all rogue macros.** Rogue macros page › Selected macro › "Reset": your own text of that macro goes and it gets its default text again. "Reset all macros" (also Addon › Reset › Rogue macros) does it for every macro (in combat when combat ends). No macro is created or deleted; groups and action buttons stay. Both ask first.
+- **Poison tracker: shift-click applies the next missing one.** Shift-left-click on any poison or stone button applies what is missing next: the poison on the main hand, then on the off hand, then the sharpening stone on the main hand, then on the off hand. Click again for the next one; with nothing missing it says so in chat. The tooltip tells what it would apply. In combat it stays what it was when the fight began.
+- **Poison tracker settings.** Layout › Poison tracker: when the warning begins (1–30 minutes left, default 5; also for the stones), whether warnings blink (off: they only turn red), and sharpening stones on or off (the same switch as on the Modules page).
+- **Rogue macros page reordered.** Under the list: "Selected macro" (Edit, Refresh / Create, Reset); under the preview: "All macros" (Refresh all, Create missing, Reset all macros).
+
 ## 1.12.0 (2026-11-19)
 
 - **Health bar: "Reactive" color.** Layout › Health › Color › Reactive: three colors of your own for 100 %, 50 % and 0 % health (defaults 29BDAC, ECEC32, E33030) that run into each other as health drops, the same linear curve as EllesmereUI's custom dynamic color. The game evaluates the curve, so it also works in combat.
