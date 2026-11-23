@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.13.1 (2026-11-23)
+
+- **Fix:** the What's new window opened behind the settings window ("Show now" on the Modules page); it now stays in front.
+
 ## 1.13.0 (2026-11-23)
 
 - **What's new window.** After an update a window shows the new features once, in English or German. Switch it off in the window or under Addon › Modules › What's new; `/brogue news` opens it again. A fresh install doesn't show it.

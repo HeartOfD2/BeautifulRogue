@@ -67,7 +67,7 @@ local function TextHeight(fs, width, size, spacing)
 end
 
 local function Build()
-    win = UI.Window("BeautifulRogueWhatsNew", W, H, L["What's new in %s"]:format(ns.TITLE), { strata = "DIALOG" })
+    win = UI.Window("BeautifulRogueWhatsNew", W, H, L["What's new in %s"]:format(ns.TITLE), { strata = "FULLSCREEN" })   -- above the settings window (DIALOG), below its message boxes
     versionText = ns.Text(win, 11)
     versionText:SetPoint("TOPRIGHT", -32, -13)
     ns.Color(versionText, T.muted)
